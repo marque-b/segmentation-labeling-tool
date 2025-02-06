@@ -3,7 +3,7 @@ import Workspace from "./components/Workspace";
 
 function App() {
   return (
-    <main>
+    <main className="min-h-screen">
       <Controls />
       <Workspace />
     </main>
