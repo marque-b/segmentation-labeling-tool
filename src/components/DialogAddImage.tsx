@@ -29,8 +29,9 @@ interface DialogAddImageProps {
 }
 
 export default function DialogAddImage({ datasetId }: DialogAddImageProps) {
-  const { addImageToDataset } = useCOCOStore();
+  const { addImageToDataset, addImageFile } = useCOCOStore();
   const [open, setOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const form = useForm<Image>({
@@ -66,6 +67,7 @@ export default function DialogAddImage({ datasetId }: DialogAddImageProps) {
     if (file) {
       form.setValue("file_name", file.name);
       form.setValue("date_captured", new Date(file.lastModified).toISOString());
+      setSelectedFile(file);
 
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -83,16 +85,20 @@ export default function DialogAddImage({ datasetId }: DialogAddImageProps) {
   };
 
   const onSubmit = (data: Image) => {
+    if (selectedFile) {
+      addImageFile(datasetId, selectedFile);
+    }
+
     const fixedData = {
       ...data,
       coco_url: data.coco_url || "",
       flickr_url: data.flickr_url || "",
     };
 
-    console.log("Submitting image:", data);
     addImageToDataset(datasetId, fixedData);
     form.reset();
     setImagePreview(null);
+    setSelectedFile(null);
     setOpen(false);
   };
 
@@ -104,7 +110,7 @@ export default function DialogAddImage({ datasetId }: DialogAddImageProps) {
           Add Image
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-screen overflow-y-auto py-28">
+      <DialogContent className="max-h-screen overflow-y-auto py-16 md:p-6">
         <DialogHeader>
           <DialogTitle>Add Image</DialogTitle>
           <DialogDescription>
