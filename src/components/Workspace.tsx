@@ -1,6 +1,6 @@
 import { useCOCOStore } from "../store/useCOCOStore";
 import AssetCard from "./AssetCard";
-import DialogInfo from "./DialogInfo";
+import DialogAddInfo from "./DialogAddInfo";
 
 function NotInitialized() {
   return (
@@ -9,7 +9,7 @@ function NotInitialized() {
         You have not initialized the Dataset. Click on the button bellow to
         start
       </span>
-      <DialogInfo />
+      <DialogAddInfo />
     </div>
   );
 }
@@ -29,7 +29,7 @@ function Workspace() {
             ))}
           </div>
           <div className="w-full my-8 flex justify-center">
-            <DialogInfo />
+            <DialogAddInfo />
           </div>
         </>
       )}

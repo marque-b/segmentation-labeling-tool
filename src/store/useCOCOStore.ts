@@ -24,7 +24,6 @@ interface Image {
   width: number;
   date_captured: string;
   flickr_url: string;
-  id: number;
 }
 
 type Segmentation = number[] | number[][];
@@ -56,8 +55,10 @@ export interface Dataset {
 interface COCOState {
   datasets: Dataset[];
   addDataset: (info: Info) => void;
+  imageIdCounter: number;
   updateDataset: (id: string, updatedInfo: Info) => void;
   removeDataset: (id: string) => void;
+  addImageToDataset: (datasetId: string, image: Image) => void;
   exportDataset: (id: string) => Dataset | undefined;
 }
 
@@ -65,6 +66,7 @@ export const useCOCOStore = create<COCOState>()(
   devtools(
     (set, get) => ({
       datasets: [],
+      imageIdCounter: 1,
 
       addDataset: (info) => {
         const newDataset: Dataset = {
@@ -88,6 +90,21 @@ export const useCOCOStore = create<COCOState>()(
       removeDataset: (id) =>
         set((state) => ({
           datasets: state.datasets.filter((dataset) => dataset.id !== id),
+        })),
+
+      addImageToDataset: (datasetId, imageData) =>
+        set((state) => ({
+          datasets: state.datasets.map((dataset) =>
+            dataset.id === datasetId
+              ? {
+                  ...dataset,
+                  images: [
+                    ...dataset.images,
+                    { ...imageData, id: state.datasets.length + 1 },
+                  ],
+                }
+              : dataset
+          ),
         })),
 
       exportDataset: (id) =>

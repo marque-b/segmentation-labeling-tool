@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { FileJson } from "lucide-react";
 import { useState } from "react";
 
-function DialogInfo() {
+function DialogAddInfo() {
   const { addDataset } = useCOCOStore();
   const [open, setOpen] = useState(false);
 
@@ -147,4 +147,4 @@ function DialogInfo() {
   );
 }
 
-export default DialogInfo;
+export default DialogAddInfo;
