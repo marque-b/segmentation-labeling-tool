@@ -69,6 +69,7 @@ interface COCOState {
   addImageToDataset: (datasetId: string, image: Image) => void;
   addImageFile: (datasetId: string, file: File) => void;
   exportDataset: (id: string) => Dataset | undefined;
+  removeImageFromDataset: (datasetId: string, fileName: string) => void;
 }
 
 export const useCOCOStore = create<COCOState>()(
@@ -123,12 +124,29 @@ export const useCOCOStore = create<COCOState>()(
           imageFiles: [
             ...state.imageFiles,
             {
-              id: crypto.randomUUID(),
+              id: uuidv4(),
               datasetId,
               file,
               previewUrl: URL.createObjectURL(file),
             },
           ],
+        })),
+
+      removeImageFromDataset: (datasetId: string, fileName: string) =>
+        set((state) => ({
+          datasets: state.datasets.map((dataset) =>
+            dataset.id === datasetId
+              ? {
+                  ...dataset,
+                  images: dataset.images.filter(
+                    (img) => img.file_name !== fileName
+                  ),
+                }
+              : dataset
+          ),
+          imageFiles: state.imageFiles.filter(
+            (file) => file.file.name !== fileName
+          ),
         })),
 
       exportDataset: (id) =>

@@ -2,12 +2,22 @@ import { useParams } from "react-router-dom";
 import { useCOCOStore } from "@/store/useCOCOStore";
 import { CircleUser, CalendarDays, CircleDotDashed, Link2 } from "lucide-react";
 import DialogAddImage from "./DialogAddImage";
+import { useMemo } from "react";
+import ImageCard from "./ImageCard";
 
 export default function AssetPage() {
   const { id } = useParams();
   const dataset = useCOCOStore((state) =>
     state.datasets.find((d) => d.id === id)
   );
+
+  const { imageFiles, removeImageFromDataset } = useCOCOStore();
+
+  const filteredImageFiles = useMemo(
+    () => imageFiles.filter((img) => img.datasetId === dataset?.id),
+    [imageFiles, dataset?.id]
+  );
+  console.log(filteredImageFiles);
 
   if (!dataset) return <div className="container">Dataset not found</div>;
 
@@ -37,15 +47,28 @@ export default function AssetPage() {
       </div>
 
       <div className="mt-4">
-        <h2 className="text-xl font-semibold">Images</h2>
+        <h2 className="text-xl font-semibold mb-4">Images</h2>
         {dataset.images.length === 0 ? (
           <p>No images added yet.</p>
         ) : (
-          <ul className="list-disc ml-6">
-            {dataset.images.map((image, key) => (
-              <li key={key}>{image.file_name}</li>
-            ))}
-          </ul>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {dataset.images.map((image, key) => {
+              const storedFile = imageFiles.find(
+                (file) => file.file.name === image.file_name
+              );
+              return (
+                <ImageCard
+                  key={key}
+                  fileName={image.file_name}
+                  previewUrl={storedFile?.previewUrl}
+                  onEdit={() => console.log(`Edit ${image.file_name}`)}
+                  onDelete={() =>
+                    removeImageFromDataset(dataset.id, image.file_name)
+                  }
+                />
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
