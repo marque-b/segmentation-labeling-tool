@@ -1,8 +1,14 @@
+import Controls from "./components/Controls";
+import Workspace from "./components/Workspace";
+
 function App() {
   return (
-    <>
-      <h1 className="text-red-800 mt-10">Vite + React</h1>
-    </>
+    <main className="flex flex-col justify-center items-center h-screen">
+      <Controls />
+      <div className="flex-1 overflow-hidden min-w-full">
+        <Workspace />
+      </div>
+    </main>
   );
 }
 
