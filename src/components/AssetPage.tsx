@@ -1,8 +1,7 @@
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useCOCOStore } from "@/store/useCOCOStore";
 import { CircleUser, CalendarDays, CircleDotDashed, Link2 } from "lucide-react";
 import DialogAddImage from "./DialogAddImage";
-import { useMemo } from "react";
 import ImageCard from "./ImageCard";
 
 export default function AssetPage() {
@@ -10,14 +9,8 @@ export default function AssetPage() {
   const dataset = useCOCOStore((state) =>
     state.datasets.find((d) => d.id === id)
   );
-
   const { imageFiles, removeImageFromDataset } = useCOCOStore();
-
-  const filteredImageFiles = useMemo(
-    () => imageFiles.filter((img) => img.datasetId === dataset?.id),
-    [imageFiles, dataset?.id]
-  );
-  console.log(filteredImageFiles);
+  const navigate = useNavigate();
 
   if (!dataset) return <div className="container">Dataset not found</div>;
 
@@ -61,7 +54,9 @@ export default function AssetPage() {
                   key={key}
                   fileName={image.file_name}
                   previewUrl={storedFile?.previewUrl}
-                  onEdit={() => console.log(`Edit ${image.file_name}`)}
+                  onEdit={() =>
+                    navigate(`/editor/${dataset.id}/${image.file_name}`)
+                  }
                   onDelete={() =>
                     removeImageFromDataset(dataset.id, image.file_name)
                   }
