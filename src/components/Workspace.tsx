@@ -1,4 +1,5 @@
 import { useCOCOStore } from "../store/useCOCOStore";
+import AssetCard from "./AssetCard";
 import DialogInfo from "./DialogInfo";
 
 function NotInitialized() {
@@ -14,12 +15,24 @@ function NotInitialized() {
 }
 
 function Workspace() {
-  const { info, licenses, images, annotations, categories } = useCOCOStore();
+  const { datasets } = useCOCOStore();
 
-  console.log(info, licenses, images, annotations, categories);
   return (
-    <div className="container h-full">
-      {!info ? <NotInitialized /> : <div>Fata</div>}
+    <div className="container h-full py-8">
+      {datasets.length === 0 ? (
+        <NotInitialized />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 place-items-center">
+            {datasets.map((dataset) => (
+              <AssetCard key={dataset.id} dataset={dataset} />
+            ))}
+          </div>
+          <div className="w-full my-8 flex justify-center">
+            <DialogInfo />
+          </div>
+        </>
+      )}
     </div>
   );
 }

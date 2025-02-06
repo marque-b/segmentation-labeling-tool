@@ -21,9 +21,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { FileJson } from "lucide-react";
+import { useState } from "react";
 
 function DialogInfo() {
-  const { setInfo } = useCOCOStore();
+  const { addDataset } = useCOCOStore();
+  const [open, setOpen] = useState(false);
 
   const form = useForm<Info>({
     resolver: zodResolver(infoSchema),
@@ -38,11 +40,13 @@ function DialogInfo() {
   });
 
   const onSubmit = (data: Info) => {
-    setInfo(data);
+    addDataset(data);
+    form.reset();
+    setOpen(false);
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline">
           <FileJson />

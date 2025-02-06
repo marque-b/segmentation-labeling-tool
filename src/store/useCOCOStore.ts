@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-
+import { v4 as uuidv4 } from "uuid";
 interface Info {
   description: string;
   url: string;
@@ -44,58 +44,54 @@ interface Category {
   name: string;
 }
 
-interface COCOState {
-  info: Info | null;
+export interface Dataset {
+  id: string;
+  info: Info;
   licenses: License[];
   images: Image[];
   annotations: Annotation[];
   categories: Category[];
-  setInfo: (info: Info) => void;
-  addLicense: (license: License) => void;
-  addImage: (image: Image) => void;
-  addAnnotation: (annotation: Annotation) => void;
-  addCategory: (category: Category) => void;
-  reset: () => void;
-  exportCOCO: () => {
-    info: Info;
-    licenses: License[];
-    images: Image[];
-    annotations: Annotation[];
-    categories: Category[];
-  } | null;
+}
+
+interface COCOState {
+  datasets: Dataset[];
+  addDataset: (info: Info) => void;
+  updateDataset: (id: string, updatedInfo: Info) => void;
+  removeDataset: (id: string) => void;
+  exportDataset: (id: string) => Dataset | undefined;
 }
 
 export const useCOCOStore = create<COCOState>()(
   devtools(
     (set, get) => ({
-      info: null,
-      licenses: [],
-      images: [],
-      annotations: [],
-      categories: [],
-      setInfo: (info) => set({ info }),
-      addLicense: (license) =>
-        set((state) => ({ licenses: [...state.licenses, license] })),
-      addImage: (image) =>
-        set((state) => ({ images: [...state.images, image] })),
-      addAnnotation: (annotation) =>
-        set((state) => ({ annotations: [...state.annotations, annotation] })),
-      addCategory: (category) =>
-        set((state) => ({ categories: [...state.categories, category] })),
-      reset: () =>
-        set({
-          info: null,
+      datasets: [],
+
+      addDataset: (info) => {
+        const newDataset: Dataset = {
+          id: uuidv4(),
+          info,
           licenses: [],
           images: [],
           annotations: [],
           categories: [],
-        }),
-      exportCOCO: () => {
-        const { info, licenses, images, annotations, categories } = get();
-        return info
-          ? { info, licenses, images, annotations, categories }
-          : null;
+        };
+        set((state) => ({ datasets: [...state.datasets, newDataset] }));
       },
+
+      updateDataset: (id, updatedInfo) =>
+        set((state) => ({
+          datasets: state.datasets.map((dataset) =>
+            dataset.id === id ? { ...dataset, info: updatedInfo } : dataset
+          ),
+        })),
+
+      removeDataset: (id) =>
+        set((state) => ({
+          datasets: state.datasets.filter((dataset) => dataset.id !== id),
+        })),
+
+      exportDataset: (id) =>
+        get().datasets.find((dataset) => dataset.id === id),
     }),
     { name: "COCOStore" }
   )
