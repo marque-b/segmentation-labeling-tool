@@ -1,8 +1,12 @@
+import Controls from "./components/Controls";
+import Workspace from "./components/Workspace";
+
 function App() {
   return (
-    <>
-      <div>App</div>
-    </>
+    <main>
+      <Controls />
+      <Workspace />
+    </main>
   );
 }
 
