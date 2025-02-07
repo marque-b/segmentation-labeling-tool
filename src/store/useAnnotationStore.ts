@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { v4 as uuidv4 } from "uuid";
 
-type Tool = "brush" | "polygon" | "eraser" | "none";
+export type Tool = "polygon" | "brush" | "eraser" | "none";
+export type PositionMode = "precision" | "direct";
 
 interface AnnotationClass {
   id: string;
@@ -18,6 +19,10 @@ interface AnnotationState {
   selectClass: (id: string) => void;
   activeTool: Tool;
   setActiveTool: (tool: Tool) => void;
+  activePositionMode: PositionMode;
+  setActivePositionMode: (mode: PositionMode) => void;
+  brushSize: number;
+  setBrushSize: (size: number) => void;
 }
 
 export const useAnnotationStore = create<AnnotationState>((set) => ({
@@ -40,6 +45,10 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
     set((state) => ({
       selectedClassId: state.selectedClassId === id ? null : id,
     })),
+  activePositionMode: "direct",
+  setActivePositionMode: (mode) => set({ activePositionMode: mode }),
+  brushSize: 5,
+  setBrushSize: (size) => set({ brushSize: size }),
 
   activeTool: "none",
   setActiveTool: (tool) => set({ activeTool: tool }),

@@ -8,23 +8,58 @@ import {
   LocateFixed,
   Mouse,
   Eraser,
-  SquarePlus,
   Square,
   ArrowLeftToLine,
   ArrowRightToLine,
+  LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useAnnotationStore } from "@/store/useAnnotationStore";
+import {
+  PositionMode,
+  Tool,
+  useAnnotationStore,
+} from "@/store/useAnnotationStore";
 import DialogAddClass from "./DialogAddClass";
+
+interface ToolItem {
+  id: Tool;
+  icon: LucideIcon;
+  label: string;
+}
+
+interface PositionModeItem {
+  id: PositionMode;
+  icon: LucideIcon;
+  label: string;
+}
 
 export default function AnnotationControls() {
   const [collapsed, setCollapsed] = useState(false);
-  const { classes, selectClass, selectedClassId } = useAnnotationStore();
+  const {
+    classes,
+    selectedClassId,
+    selectClass,
+    activeTool,
+    setActiveTool,
+    activePositionMode,
+    setActivePositionMode,
+  } = useAnnotationStore();
+
+  const tools: ToolItem[] = [
+    { id: "polygon", icon: Waypoints, label: "Polygon" },
+    { id: "brush", icon: Brush, label: "Brush" },
+    { id: "eraser", icon: Eraser, label: "Eraser" },
+  ];
+
+  const positionModes: PositionModeItem[] = [
+    { id: "precision", icon: LocateFixed, label: "Precision Mode" },
+    { id: "direct", icon: Mouse, label: "Direct Mode" },
+  ];
 
   return (
     <div
-      className={`absolute top-1/2 transform -translate-y-1/2 z-30 
+      className={`absolute top-2/5 transform -translate-y-1/2 z-30 
         bg-gray-800 p-2 rounded-lg shadow-md transition-all
         ${collapsed ? "w-[50px]" : "w-[60px]"}`}
     >
@@ -36,6 +71,9 @@ export default function AnnotationControls() {
         >
           {collapsed ? <ArrowRightToLine /> : <ArrowLeftToLine />}
         </Button>
+        <Button variant="ghost" size="icon">
+          <Save size={18} />
+        </Button>
       </div>
 
       <div className="flex flex-col items-center space-y-2">
@@ -44,11 +82,7 @@ export default function AnnotationControls() {
             key={cls.id}
             variant="ghost"
             className={`flex justify-start items-center transition-colors duration-200
-              ${
-                selectedClassId === cls.id
-                  ? "bg-opacity-40 bg-gray-500"
-                  : "hover:bg-gray-700"
-              }
+              ${selectedClassId === cls.id ? "bg-opacity-40 bg-gray-500" : ""}
             `}
             onClick={() => selectClass(cls.id)}
             onTouchStart={() => selectClass(cls.id)}
@@ -57,6 +91,55 @@ export default function AnnotationControls() {
           </Button>
         ))}
         <DialogAddClass />
+      </div>
+
+      <div className="border-t my-2 w-full border-gray-600" />
+
+      <div className="flex flex-col items-center space-y-2">
+        {positionModes.map((mode) => (
+          <Button
+            key={mode.id}
+            variant="ghost"
+            className={`${activePositionMode === mode.id ? "bg-gray-700" : ""}`}
+            onClick={() => setActivePositionMode(mode.id)}
+            onTouchStart={() => setActivePositionMode(mode.id)}
+          >
+            <mode.icon size={16} />
+          </Button>
+        ))}
+      </div>
+
+      <div className="border-t my-2 w-full border-gray-600" />
+
+      <div className="flex flex-col items-center space-y-2">
+        {tools.map((tool) => (
+          <Button
+            key={tool.id}
+            disabled={true}
+            variant="ghost"
+            className={`w-full flex justify-center items-center transition-all duration-200
+              ${activeTool === tool.id ? "bg-gray-500" : ""}`}
+            onClick={() =>
+              setActiveTool(activeTool === tool.id ? "none" : tool.id)
+            }
+            onTouchStart={() =>
+              setActiveTool(activeTool === tool.id ? "none" : tool.id)
+            }
+          >
+            <tool.icon size={18} />
+          </Button>
+        ))}
+        <Button variant="ghost" size="icon">
+          <Diameter size={16} />
+        </Button>
+      </div>
+      <div className="flex flex-col items-center space-y-2">
+        <Button variant="ghost" size="icon">
+          <Undo2 size={16} />
+        </Button>
+        <Button variant="ghost" size="icon">
+          <Redo2 size={16} />
+        </Button>
       </div>
     </div>
   );
