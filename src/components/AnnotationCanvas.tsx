@@ -49,15 +49,6 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
         console.error("Error loading background image:", error);
       });
 
-    canvas.forEachObject((obj) => {
-      obj.selectable = false;
-      obj.evented = false;
-      obj.hasBorders = false;
-      obj.hasControls = false;
-      obj.lockMovementX = true;
-      obj.lockMovementY = true;
-    });
-
     canvas.selection = false;
 
     canvas.renderAll();

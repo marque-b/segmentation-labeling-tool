@@ -1,12 +1,9 @@
 import { useState, useEffect } from "react";
 import { Canvas, Polygon, TPointerEvent, TPointerEventInfo } from "fabric";
 import { useAnnotationStore } from "@/store/useAnnotationStore";
-import { isDragActive } from "framer-motion";
 
 export function usePolygonTool(canvas: Canvas | null, active: boolean) {
-  const [polygonPoints, setPolygonPoints] = useState<
-    { x: number; y: number }[]
-  >([]);
+  const [, setPolygonPoints] = useState<{ x: number; y: number }[]>([]);
   const { selectedClassId, classes, saveHistory } = useAnnotationStore();
 
   const activeClass = classes.find((cls) => cls.id === selectedClassId);

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import AnnotationCanvas from "./AnnotationCanvas";
 import { ImageData } from "./EditorPage";
+import { useAnnotationStore } from "@/store/useAnnotationStore";
 
 interface Touch {
   identifier: number;
@@ -34,6 +35,8 @@ export default function AnnotationArea({ imageData }: AnnotationAreaProps) {
   useEffect(() => {
     transformRef.current = transform;
   }, [transform]);
+
+  const { activeTool } = useAnnotationStore();
 
   useEffect(() => {
     const container = areaRef.current;
@@ -90,6 +93,9 @@ export default function AnnotationArea({ imageData }: AnnotationAreaProps) {
     };
 
     const handleMouseDown = (event: MouseEvent) => {
+      if ((event.target as HTMLElement).closest("canvas")) {
+        return;
+      }
       if (event.button === 0) {
         isPanning.current = true;
         const pos = getRelativePosition(event.clientX, event.clientY);
@@ -230,7 +236,7 @@ export default function AnnotationArea({ imageData }: AnnotationAreaProps) {
       window.removeEventListener("mouseup", handleMouseUp);
       window.removeEventListener("mouseleave", handleMouseUp);
     };
-  }, []);
+  }, [activeTool]);
 
   return (
     <div
