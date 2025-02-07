@@ -1,107 +1,45 @@
-import { useState, useEffect } from "react";
-import { Canvas, Polygon, TPointerEvent, TPointerEventInfo } from "fabric";
+import { useEffect, useRef } from "react";
+import {
+  Canvas,
+  Polygon,
+  Circle,
+  TPointerEvent,
+  TPointerEventInfo,
+} from "fabric";
 import { useAnnotationStore } from "@/store/useAnnotationStore";
 
 export function usePolygonTool(canvas: Canvas | null, active: boolean) {
-  const [, setPolygonPoints] = useState<{ x: number; y: number }[]>([]);
+  const tempPointsRef = useRef<Array<{ x: number; y: number; circle: Circle }>>(
+    []
+  );
+  const tempPolygonRef = useRef<Polygon | null>(null);
   const { selectedClassId, classes, saveHistory } = useAnnotationStore();
-
   const activeClass = classes.find((cls) => cls.id === selectedClassId);
   const polygonColor = activeClass ? activeClass.color : "#00ff00";
 
-  useEffect(() => {
-    if (!canvas || !active) return;
-
-    const handleCanvasClick = (event: TPointerEventInfo<TPointerEvent>) => {
-      if (!canvas) return;
-
-      const pointer = canvas.getScenePoint(event.e);
-      const newPoint = { x: pointer.x, y: pointer.y };
-
-      setPolygonPoints((prevPoints) => {
-        const updatedPoints = [...prevPoints, newPoint];
-        saveHistory();
-
-        if (updatedPoints.length > 2 && isCloseToFirstPoint(updatedPoints)) {
-          finalizePolygon(updatedPoints);
-          return [];
-        } else {
-          drawPolygon(updatedPoints);
-          return updatedPoints;
-        }
-      });
-    };
-
-    canvas.on("mouse:down", handleCanvasClick);
-    return () => {
-      canvas.off("mouse:down", handleCanvasClick);
-    };
-  }, [canvas, active, saveHistory, classes, selectedClassId]);
-
-  useEffect(() => {
-    if (!active && canvas) {
-      setPolygonPoints([]);
-      canvas.getObjects().forEach((obj) => {
-        if ((obj as any).data?.temporary) {
-          canvas.remove(obj);
-        }
-      });
-      canvas.renderAll();
-    }
-  }, [active, canvas]);
-
-  const drawPolygon = (points: { x: number; y: number }[]) => {
+  const updateTempPolygon = () => {
     if (!canvas) return;
-
-    canvas.getObjects().forEach((obj) => {
-      if ((obj as any).data?.temporary) {
-        canvas.remove(obj);
-      }
-    });
-
+    if (tempPolygonRef.current) {
+      canvas.remove(tempPolygonRef.current);
+      tempPolygonRef.current = null;
+    }
+    const points = tempPointsRef.current.map((p) => ({ x: p.x, y: p.y }));
+    if (points.length === 0) return;
     const polygon = new Polygon(points, {
       fill: `${polygonColor}50`,
       stroke: polygonColor,
       strokeWidth: 2,
       selectable: false,
       hasControls: false,
-      isDragActive: false,
       data: { temporary: true },
     } as any);
-
+    tempPolygonRef.current = polygon;
     canvas.add(polygon);
-    canvas.renderAll();
-  };
-
-  const finalizePolygon = (points: { x: number; y: number }[]) => {
-    if (!canvas) return;
-
-    canvas.getObjects().forEach((obj) => {
-      if ((obj as any).data?.temporary) {
-        canvas.remove(obj);
-      }
-    });
-
-    const finalPolygon = new Polygon(points, {
-      fill: `${polygonColor}80`,
-      stroke: polygonColor,
-      strokeWidth: 2,
-      selectable: true,
-      hasControls: true,
-      isDragActive: false,
-      data: {
-        classId: selectedClassId,
-        type: "polygon",
-      },
-    } as any);
-
-    canvas.add(finalPolygon);
-    canvas.renderAll();
-
     saveHistory();
+    canvas.renderAll();
   };
 
-  const isCloseToFirstPoint = (points: { x: number; y: number }[]): boolean => {
+  const isCloseToFirstPoint = (points: Array<{ x: number; y: number }>) => {
     if (points.length < 3) return false;
     const first = points[0];
     const last = points[points.length - 1];
@@ -110,4 +48,79 @@ export function usePolygonTool(canvas: Canvas | null, active: boolean) {
     );
     return distance < 10;
   };
+
+  const finalizePolygon = () => {
+    if (!canvas) return;
+    const points = tempPointsRef.current.map((p) => ({ x: p.x, y: p.y }));
+    tempPointsRef.current.forEach((p) => canvas.remove(p.circle));
+    tempPointsRef.current = [];
+    if (tempPolygonRef.current) {
+      canvas.remove(tempPolygonRef.current);
+      tempPolygonRef.current = null;
+    }
+    if (points.length === 0) return;
+    const finalPolygon = new Polygon(points, {
+      fill: `${polygonColor}80`,
+      stroke: polygonColor,
+      strokeWidth: 2,
+      selectable: false,
+      hasControls: false,
+      data: { classId: selectedClassId, type: "polygon" },
+    } as any);
+    canvas.add(finalPolygon);
+    canvas.renderAll();
+  };
+
+  useEffect(() => {
+    if (!canvas || !active) return;
+
+    const handleCanvasClick = (event: TPointerEventInfo<TPointerEvent>) => {
+      if (!canvas) return;
+      const pointer = canvas.getScenePoint(event.e);
+      const newPoint = { x: pointer.x, y: pointer.y };
+      const circle = new Circle({
+        left: newPoint.x,
+        top: newPoint.y,
+        radius: 5,
+        fill: polygonColor,
+        originX: "center",
+        originY: "center",
+        selectable: true,
+        hasControls: false,
+        data: { temporaryPoint: true },
+      } as any);
+      canvas.add(circle);
+      circle.on("modified", () => {
+        const idx = tempPointsRef.current.findIndex((p) => p.circle === circle);
+        if (idx !== -1) {
+          tempPointsRef.current[idx].x = circle.left!;
+          tempPointsRef.current[idx].y = circle.top!;
+          updateTempPolygon();
+        }
+      });
+      tempPointsRef.current.push({ x: newPoint.x, y: newPoint.y, circle });
+      updateTempPolygon();
+      const pts = tempPointsRef.current.map((p) => ({ x: p.x, y: p.y }));
+      if (pts.length > 2 && isCloseToFirstPoint(pts)) {
+        finalizePolygon();
+      }
+    };
+
+    canvas.on("mouse:down", handleCanvasClick);
+    return () => {
+      canvas.off("mouse:down", handleCanvasClick);
+    };
+  }, [canvas, active, selectedClassId, classes]);
+
+  useEffect(() => {
+    if (!active && canvas) {
+      tempPointsRef.current.forEach((p) => canvas.remove(p.circle));
+      tempPointsRef.current = [];
+      if (tempPolygonRef.current) {
+        canvas.remove(tempPolygonRef.current);
+        tempPolygonRef.current = null;
+      }
+      canvas.renderAll();
+    }
+  }, [active, canvas]);
 }

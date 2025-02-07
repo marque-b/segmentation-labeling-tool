@@ -4,6 +4,7 @@ import { ImageData } from "./EditorPage";
 import { useAnnotationStore } from "@/store/useAnnotationStore";
 import { usePolygonTool } from "@/hooks/usePolygonTool";
 import { useBrushTool } from "@/hooks/useBrushTool";
+import { useEraserTool } from "@/hooks/useEraserTool";
 
 interface AnnotationCanvasProps {
   imageData: ImageData;
@@ -31,7 +32,6 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
       .then((img) => {
         img.set({
           selectable: false,
-          evented: false,
           left: 0,
           top: 0,
           hasControls: false,
@@ -49,9 +49,21 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
         console.error("Error loading background image:", error);
       });
 
-    canvas.selection = false;
-
-    canvas.renderAll();
+    const lockAllObjects = () => {
+      canvas.getObjects().forEach((obj) => {
+        obj.set({
+          selectable: false,
+          evented: false,
+          lockMovementX: true,
+          lockMovementY: true,
+          hasControls: false,
+          hoverCursor: "default",
+        });
+      });
+      canvas.renderAll();
+    };
+    lockAllObjects();
+    canvas.on("object:added", () => lockAllObjects());
 
     return () => {
       canvas.dispose();
@@ -60,6 +72,7 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
 
   usePolygonTool(fabricRef.current, activeTool === "polygon");
   useBrushTool(fabricRef.current, activeTool === "brush");
+  useEraserTool(fabricRef.current, activeTool === "eraser");
 
   return <canvas ref={canvasRef} />;
 }

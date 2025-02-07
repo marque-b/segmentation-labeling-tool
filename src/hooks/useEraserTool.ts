@@ -2,25 +2,32 @@ import { useEffect } from "react";
 import { Canvas, PencilBrush } from "fabric";
 import { useAnnotationStore } from "@/store/useAnnotationStore";
 
-export function useBrushTool(canvas: Canvas | null, active: boolean) {
-  const { brushSize, selectedClassId, classes, saveHistory } =
-    useAnnotationStore();
-  const activeClass = classes.find((cls) => cls.id === selectedClassId);
-  const brushColor = activeClass ? activeClass.color : "#000000";
+class EraserBrush extends PencilBrush {
+  _finalizeAndAddPath() {
+    const ctx = this.canvas.contextTop;
+    const originalComposite = ctx.globalCompositeOperation;
+    ctx.globalCompositeOperation = "destination-out";
+    const path = super._finalizeAndAddPath();
+    ctx.globalCompositeOperation = originalComposite;
+    return path;
+  }
+}
+
+export function useEraserTool(canvas: Canvas | null, active: boolean) {
+  const { brushSize, saveHistory } = useAnnotationStore();
 
   useEffect(() => {
     if (!canvas) return;
     if (active) {
-      if (!canvas.freeDrawingBrush) {
-        canvas.freeDrawingBrush = new PencilBrush(canvas);
-      }
       canvas.isDrawingMode = true;
+      if (!(canvas.freeDrawingBrush instanceof EraserBrush)) {
+        canvas.freeDrawingBrush = new EraserBrush(canvas);
+      }
       canvas.freeDrawingBrush.width = brushSize;
-      canvas.freeDrawingBrush.color = `${brushColor}70`;
     } else {
       canvas.isDrawingMode = false;
     }
-  }, [canvas, active, brushSize, brushColor]);
+  }, [canvas, active, brushSize]);
 
   useEffect(() => {
     if (!canvas || !active) return;

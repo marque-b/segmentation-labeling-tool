@@ -47,7 +47,6 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   history: [],
   currentHistoryIndex: -1,
   canvas: null,
-
   addClass: (name, supercategory, color) =>
     set((state) => {
       const newClass = { id: uuidv4(), name, supercategory, color };
@@ -56,31 +55,26 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         selectedClassId: newClass.id,
       };
     }),
-
   removeClass: (id) =>
     set((state) => ({
       classes: state.classes.filter((c) => c.id !== id),
     })),
-
   selectClass: (id) =>
     set((state) => ({
       selectedClassId: state.selectedClassId === id ? null : id,
     })),
-
   setActivePositionMode: (mode) => set({ activePositionMode: mode }),
   setBrushSize: (size) => set({ brushSize: size }),
   setActiveTool: (tool) => set({ activeTool: tool }),
   saveHistory: () => {
     const { canvas } = get();
     if (!canvas) return;
-
     const newState: HistoryState = {
       objects: JSON.stringify(
         (canvas as any).toJSON(["backgroundImage", "src"])
       ),
       timestamp: Date.now(),
     };
-
     set((state) => {
       const newHistory = state.history.slice(0, state.currentHistoryIndex + 1);
       return {
@@ -92,21 +86,46 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   undo: () => {
     const { canvas, currentHistoryIndex, history } = get();
     if (!canvas || currentHistoryIndex <= 0) return;
-
     const previousState = history[currentHistoryIndex - 1];
     canvas.loadFromJSON(previousState.objects, () => {
-      setTimeout(() => canvas.renderAll(), 10);
+      canvas.getObjects().forEach((obj) => {
+        if (obj.type === "image") {
+          obj.set({
+            selectable: false,
+            evented: false,
+            hasControls: false,
+            lockMovementX: true,
+            lockMovementY: true,
+            hoverCursor: "default",
+          });
+        }
+      });
+      setTimeout(() => {
+        canvas.renderAll();
+      }, 10);
       set({ currentHistoryIndex: currentHistoryIndex - 1 });
     });
   },
-
   redo: () => {
     const { canvas, currentHistoryIndex, history } = get();
     if (!canvas || currentHistoryIndex >= history.length - 1) return;
-
     const nextState = history[currentHistoryIndex + 1];
     canvas.loadFromJSON(nextState.objects, () => {
-      setTimeout(() => canvas.renderAll(), 10);
+      canvas.getObjects().forEach((obj) => {
+        if (obj.type === "image") {
+          obj.set({
+            selectable: false,
+            evented: false,
+            hasControls: false,
+            lockMovementX: true,
+            lockMovementY: true,
+            hoverCursor: "default",
+          });
+        }
+      });
+      setTimeout(() => {
+        canvas.renderAll();
+      }, 10);
       set({ currentHistoryIndex: currentHistoryIndex + 1 });
     });
   },

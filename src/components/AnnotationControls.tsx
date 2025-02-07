@@ -136,7 +136,10 @@ export default function AnnotationControls() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setShowDiameterSlider(!showDiameterSlider)}
+            onClick={() => {
+              setShowDiameterSlider(!showDiameterSlider);
+              setActiveTool("none");
+            }}
           >
             <Diameter size={16} />
           </Button>
