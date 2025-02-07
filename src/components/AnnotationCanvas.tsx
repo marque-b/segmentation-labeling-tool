@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Canvas, FabricImage } from "fabric";
+import { Canvas } from "fabric";
 import { ImageData } from "./EditorPage";
 import { useAnnotationStore } from "@/store/useAnnotationStore";
 import { usePolygonTool } from "@/hooks/usePolygonTool";
@@ -23,31 +23,11 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
       width: imageData.width,
       height: imageData.height,
       selection: false,
+      backgroundColor: "transparent",
     });
 
     fabricRef.current = canvas;
     setCanvas(canvas);
-
-    FabricImage.fromURL(imageData.url)
-      .then((img) => {
-        img.set({
-          selectable: false,
-          left: 0,
-          top: 0,
-          hasControls: false,
-          lockMovementX: true,
-          lockMovementY: true,
-          hoverCursor: "default",
-          hasBorders: false,
-          hasRotatingPoint: false,
-        });
-        canvas.add(img);
-        canvas.sendObjectToBack(img);
-        canvas.renderAll();
-      })
-      .catch((error) => {
-        console.error("Error loading background image:", error);
-      });
 
     const lockAllObjects = () => {
       canvas.getObjects().forEach((obj) => {
@@ -74,5 +54,5 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
   useBrushTool(fabricRef.current, activeTool === "brush");
   useEraserTool(fabricRef.current, activeTool === "eraser");
 
-  return <canvas ref={canvasRef} />;
+  return <canvas ref={canvasRef} className="canvas" />;
 }

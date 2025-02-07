@@ -17,6 +17,12 @@ interface HistoryState {
   timestamp: number;
 }
 
+interface MaskAnnotation {
+  id: string;
+  classId: string;
+  rle: number[];
+}
+
 interface AnnotationState {
   classes: AnnotationClass[];
   selectedClassId: string | null;
@@ -26,6 +32,7 @@ interface AnnotationState {
   history: HistoryState[];
   currentHistoryIndex: number;
   canvas: Canvas | null;
+  masks: MaskAnnotation[];
   addClass: (name: string, supercategory: string, color: string) => void;
   removeClass: (id: string) => void;
   selectClass: (id: string) => void;
@@ -36,6 +43,7 @@ interface AnnotationState {
   undo: () => void;
   redo: () => void;
   setCanvas: (canvas: Canvas) => void;
+  saveMask: (rle: number[]) => void;
 }
 
 export const useAnnotationStore = create<AnnotationState>((set, get) => ({
@@ -47,6 +55,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   history: [],
   currentHistoryIndex: -1,
   canvas: null,
+  masks: [],
   addClass: (name, supercategory, color) =>
     set((state) => {
       const newClass = { id: uuidv4(), name, supercategory, color };
@@ -130,4 +139,53 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     });
   },
   setCanvas: (canvas) => set({ canvas }),
+  saveMask: (rle) => {
+    const { selectedClassId, masks } = get();
+    if (!selectedClassId) return;
+
+    const existingMaskIndex = masks.findIndex(
+      (mask) => mask.classId === selectedClassId
+    );
+
+    if (existingMaskIndex !== -1) {
+      const updatedRLE = mergeRLE(masks[existingMaskIndex].rle, rle);
+      const updatedMasks = [...masks];
+      updatedMasks[existingMaskIndex] = {
+        ...masks[existingMaskIndex],
+        rle: updatedRLE,
+      };
+      set({ masks: updatedMasks });
+    } else {
+      set({
+        masks: [...masks, { id: uuidv4(), classId: selectedClassId, rle }],
+      });
+    }
+  },
 }));
+
+function mergeRLE(existingRLE: number[], newRLE: number[]): number[] {
+  if (existingRLE.length === 0) return newRLE;
+  if (newRLE.length === 0) return existingRLE;
+
+  const merged = [];
+  let i = 0,
+    j = 0;
+  let lastValue = 0;
+
+  while (i < existingRLE.length || j < newRLE.length) {
+    const existingValue = i < existingRLE.length ? existingRLE[i] : 0;
+    const newValue = j < newRLE.length ? newRLE[j] : 0;
+
+    if (lastValue % 2 === 0) {
+      merged.push(existingValue + newValue);
+    } else {
+      merged.push(Math.max(existingValue, newValue));
+    }
+
+    i++;
+    j++;
+    lastValue++;
+  }
+
+  return merged;
+}

@@ -249,8 +249,21 @@ export default function AnnotationArea({ imageData }: AnnotationAreaProps) {
           transform: `translate(${transform.translateX}px, ${transform.translateY}px) scale(${transform.scale})`,
           transformOrigin: "0 0",
           willChange: "transform",
+          position: "relative",
+          width: imageData.width,
+          height: imageData.height,
         }}
       >
+        <img
+          src={imageData.url}
+          alt="Background"
+          style={{
+            display: "block",
+            width: imageData.width,
+            height: imageData.height,
+            userSelect: "none",
+          }}
+        />
         <AnnotationCanvas imageData={imageData} />
       </div>
     </div>

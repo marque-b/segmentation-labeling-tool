@@ -69,4 +69,9 @@
   main {
     height: 100%;
   }
+  .canvas-container {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+  }
 }
