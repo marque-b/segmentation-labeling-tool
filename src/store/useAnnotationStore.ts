@@ -23,6 +23,7 @@ interface MaskAnnotation {
   height: number;
   width: number;
   rle: number[];
+  imageId: string;
 }
 
 interface AnnotationState {
@@ -35,6 +36,8 @@ interface AnnotationState {
   currentHistoryIndex: number;
   canvas: Canvas | null;
   masks: MaskAnnotation[];
+  selectedImageId: string;
+  setSelectedImageId: (id: string) => void;
   addClass: (name: string, supercategory: string, color: string) => void;
   removeClass: (id: string) => void;
   selectClass: (id: string) => void;
@@ -45,13 +48,19 @@ interface AnnotationState {
   undo: () => void;
   redo: () => void;
   setCanvas: (canvas: Canvas) => void;
-  saveMask: (rle: number[], width: number, height: number) => void;
+  saveMask: (
+    rle: number[],
+    width: number,
+    height: number,
+    imageId: string
+  ) => void;
 }
 
 export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   classes: [],
   selectedClassId: null,
   activePositionMode: "direct",
+  selectedImageId: "",
   activeTool: "none",
   brushSize: 5,
   history: [],
@@ -141,7 +150,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     });
   },
   setCanvas: (canvas) => set({ canvas }),
-  saveMask: (rle: number[], width: number, height: number) => {
+  saveMask: (rle: number[], width: number, height: number, imageId: string) => {
     const { selectedClassId, masks } = get();
     if (!selectedClassId) return;
 
@@ -149,7 +158,8 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       (mask) =>
         mask.classId === selectedClassId &&
         mask.width === width &&
-        mask.height === height
+        mask.height === height &&
+        mask.imageId === imageId
     );
 
     if (existingMaskIndex !== -1) {
@@ -172,11 +182,19 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       set({
         masks: [
           ...masks,
-          { id: uuidv4(), classId: selectedClassId, width, height, rle },
+          {
+            id: uuidv4(),
+            classId: selectedClassId,
+            width,
+            height,
+            rle,
+            imageId,
+          },
         ],
       });
     }
   },
+  setSelectedImageId: (id: string) => set({ selectedImageId: id }),
 }));
 
 export function decodeRLE(
@@ -199,7 +217,7 @@ export function decodeRLE(
   return binaryMask;
 }
 
-function encodeRLE(binaryMask: Uint8Array): number[] {
+export function encodeRLE(binaryMask: Uint8Array): number[] {
   const rle: number[] = [];
   let count = 0;
   let current = binaryMask[0];
@@ -233,4 +251,86 @@ function mergeRLE(
   }
 
   return encodeRLE(mergedMask);
+}
+
+export function subtractRLE(
+  originalRLE: number[],
+  eraseRLE: number[],
+  width: number,
+  height: number
+): number[] {
+  const originalMask = decodeRLE(originalRLE, width, height);
+  const eraseMask = decodeRLE(eraseRLE, width, height);
+  const updatedMask = new Uint8Array(width * height);
+
+  for (let i = 0; i < updatedMask.length; i++) {
+    if (eraseMask[i] === 1 && originalMask[i] === 1) {
+      updatedMask[i] = 0;
+    } else {
+      updatedMask[i] = originalMask[i];
+    }
+  }
+
+  return encodeRLE(updatedMask);
+}
+
+export function decodeRLEForErase(
+  rle: number[],
+  width: number,
+  height: number
+): Uint8Array {
+  const binaryMask = new Uint8Array(width * height);
+  let index = 0;
+
+  for (let i = 0; i < rle.length; i++) {
+    const value = i % 2 === 0 ? 0 : 1; // Alterna entre 0 e 1
+    const count = rle[i];
+
+    for (let j = 0; j < count; j++) {
+      if (index >= binaryMask.length) break;
+      binaryMask[index++] = value;
+    }
+  }
+
+  console.log("Máscara decodificada (para borracha):", binaryMask);
+  return binaryMask;
+}
+
+export function subtractRLEForErase(
+  originalRLE: number[],
+  eraseRLE: number[],
+  width: number,
+  height: number
+): number[] {
+  const originalMask = decodeRLEForErase(originalRLE, width, height);
+  const eraseMask = decodeRLEForErase(eraseRLE, width, height);
+  const updatedMask = new Uint8Array(width * height);
+
+  for (let i = 0; i < updatedMask.length; i++) {
+    updatedMask[i] = eraseMask[i] === 1 ? 0 : originalMask[i];
+  }
+
+  console.log("Depois da subtração:", updatedMask);
+  return encodeRLE(updatedMask);
+}
+
+export function debugSubtractRLE(
+  originalRLE: number[],
+  eraseRLE: number[],
+  width: number,
+  height: number
+): number[] {
+  const originalMask = decodeRLEForErase(originalRLE, width, height);
+  const eraseMask = decodeRLEForErase(eraseRLE, width, height);
+  const updatedMask = new Uint8Array(width * height);
+
+  console.log("🔍 Antes da subtração (máscara original):", originalMask);
+  console.log("🧽 Máscara da borracha:", eraseMask);
+
+  for (let i = 0; i < updatedMask.length; i++) {
+    updatedMask[i] = eraseMask[i] === 1 ? 0 : originalMask[i];
+  }
+
+  console.log("✅ Depois da subtração:", updatedMask);
+  return encodeRLE(updatedMask);
 }

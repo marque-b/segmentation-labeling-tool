@@ -1,19 +1,20 @@
 import { Canvas, FabricImage } from "fabric";
+import { useAnnotationStore } from "@/store/useAnnotationStore";
 
-function decodeRLE(rle: number[], initial: number): Uint8Array {
-  const total = rle.reduce((sum, count) => sum + count, 0);
-  const result = new Uint8Array(total);
-  let value = initial;
-  let offset = 0;
+function decodeRLE(rle: number[], width: number, height: number): Uint8Array {
+  const binaryMask = new Uint8Array(width * height);
+  let index = 0;
 
   for (let i = 0; i < rle.length; i++) {
+    const value = i % 2 === 0 ? 0 : 1;
     const count = rle[i];
-    result.fill(value, offset, offset + count);
-    offset += count;
-    value = value === 0 ? 1 : 0;
+
+    for (let j = 0; j < count; j++) {
+      binaryMask[index++] = value;
+    }
   }
 
-  return result;
+  return binaryMask;
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
@@ -28,54 +29,59 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
 }
 
-export function renderRLE(
+function getClassColor(classId: string): string {
+  const { classes } = useAnnotationStore.getState();
+  const cls = classes.find((c) => c.id === classId);
+  return cls ? cls.color : "#000000";
+}
+
+export function renderAllRLE(
   canvas: Canvas | null,
-  rle: number[],
-  width: number,
-  height: number,
-  classColor: string
+  masks: { rle: number[]; width: number; height: number; classId: string }[]
 ) {
-  if (!canvas || rle.length === 0) return;
+  if (!canvas || masks.length === 0) return;
 
-  const binaryMask = decodeRLE(rle, 0);
-  const ctx = document.createElement("canvas").getContext("2d")!;
-  ctx.canvas.width = width;
-  ctx.canvas.height = height;
+  const width = Math.max(...masks.map((m) => m.width));
+  const height = Math.max(...masks.map((m) => m.height));
 
-  const imageData = ctx.createImageData(width, height);
-  const { r, g, b } = hexToRgb(classColor);
+  const offscreenCanvas = document.createElement("canvas");
+  offscreenCanvas.width = width;
+  offscreenCanvas.height = height;
+  const ctx = offscreenCanvas.getContext("2d")!;
 
-  for (let i = 0; i < binaryMask.length; i++) {
-    const idx = i * 4;
-    if (binaryMask[i] === 1) {
-      imageData.data[idx] = r;
-      imageData.data[idx + 1] = g;
-      imageData.data[idx + 2] = b;
-      imageData.data[idx + 3] = 255;
-    } else {
-      imageData.data[idx] = 0;
-      imageData.data[idx + 1] = 0;
-      imageData.data[idx + 2] = 0;
-      imageData.data[idx + 3] = 0;
+  ctx.clearRect(0, 0, width, height);
+
+  masks.forEach(({ rle, width, height, classId }) => {
+    const binaryMask = decodeRLE(rle, width, height);
+    const { r, g, b } = hexToRgb(getClassColor(classId));
+    const imageData = ctx.createImageData(width, height);
+
+    for (let i = 0; i < binaryMask.length; i++) {
+      const idx = i * 4;
+      if (binaryMask[i] === 1) {
+        imageData.data[idx] = r;
+        imageData.data[idx + 1] = g;
+        imageData.data[idx + 2] = b;
+        imageData.data[idx + 3] = 255;
+      }
     }
-  }
 
-  ctx.putImageData(imageData, 0, 0);
+    ctx.putImageData(imageData, 0, 0);
+  });
 
-  const fabricImage = new FabricImage(ctx.canvas, {
+  const fabricImage = new FabricImage(offscreenCanvas, {
     left: 0,
     top: 0,
     selectable: false,
     evented: false,
-    opacity: 0.5,
   });
 
-  canvas.getObjects().forEach((obj) => {
-    if (obj instanceof FabricImage) {
-      canvas.remove(obj);
-    }
-  });
+  console.log(
+    "Máscaras armazenadas:",
+    masks.map((m) => ({ classId: m.classId }))
+  );
 
+  canvas.clear();
   canvas.add(fabricImage);
   canvas.renderAll();
 }

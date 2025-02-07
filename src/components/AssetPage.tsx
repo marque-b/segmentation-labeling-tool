@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useCOCOStore } from "@/store/useCOCOStore";
 import { CircleUser, CalendarDays, CircleDotDashed, Link2 } from "lucide-react";
+import { useAnnotationStore } from "@/store/useAnnotationStore";
 import DialogAddImage from "./DialogAddImage";
 import ImageCard from "./ImageCard";
 
@@ -9,6 +10,7 @@ export default function AssetPage() {
   const dataset = useCOCOStore((state) =>
     state.datasets.find((d) => d.id === id)
   );
+
   const { imageFiles, removeImageFromDataset } = useCOCOStore();
   const navigate = useNavigate();
 
@@ -54,9 +56,17 @@ export default function AssetPage() {
                   key={key}
                   fileName={image.file_name}
                   previewUrl={storedFile?.previewUrl}
-                  onEdit={() =>
-                    navigate(`/editor/${dataset.id}/${image.file_name}`)
-                  }
+                  onEdit={() => {
+                    const imageFile = imageFiles.find(
+                      (file) => file.file.name === image.file_name
+                    );
+                    if (imageFile) {
+                      useAnnotationStore
+                        .getState()
+                        .setSelectedImageId(imageFile.id);
+                    }
+                    navigate(`/editor/${dataset.id}/${image.file_name}`);
+                  }}
                   onDelete={() =>
                     removeImageFromDataset(dataset.id, image.file_name)
                   }

@@ -3,8 +3,14 @@ import { Canvas, PencilBrush } from "fabric";
 import { useAnnotationStore } from "@/store/useAnnotationStore";
 
 export function useBrushTool(canvas: Canvas | null, active: boolean) {
-  const { brushSize, selectedClassId, classes, saveHistory, saveMask } =
-    useAnnotationStore();
+  const {
+    brushSize,
+    selectedClassId,
+    classes,
+    saveHistory,
+    saveMask,
+    selectedImageId,
+  } = useAnnotationStore();
   const activeClass = classes.find((cls) => cls.id === selectedClassId);
   const brushColor = activeClass ? activeClass.color : "#000000";
 
@@ -28,7 +34,7 @@ export function useBrushTool(canvas: Canvas | null, active: boolean) {
     const handlePathCreated = async () => {
       saveHistory();
       const rleMask = await generateRLE(canvas);
-      saveMask(rleMask, canvas.width!, canvas.height!);
+      saveMask(rleMask, canvas.width!, canvas.height!, selectedImageId);
     };
 
     canvas.on("path:created", handlePathCreated);
