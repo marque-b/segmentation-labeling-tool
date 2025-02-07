@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Tool, useAnnotationStore } from "@/store/useAnnotationStore";
 import DialogAddClass from "./DialogAddClass";
 import { Slider } from "./ui/slider";
+import { useNavigate } from "react-router-dom";
 
 interface ToolItem {
   id: Tool;
@@ -37,6 +38,7 @@ export default function AnnotationControls() {
     undo,
     redo,
   } = useAnnotationStore();
+  const navigate = useNavigate();
 
   const tools: ToolItem[] = [
     { id: "polygon", icon: Waypoints, label: "Polygon" },
@@ -58,7 +60,13 @@ export default function AnnotationControls() {
         >
           {collapsed ? <ArrowRightToLine /> : <ArrowLeftToLine />}
         </Button>
-        <Button variant="ghost" size="icon">
+        <Button
+          onClick={() => {
+            navigate("/");
+          }}
+          variant="ghost"
+          size="icon"
+        >
           <Save size={18} />
         </Button>
       </div>

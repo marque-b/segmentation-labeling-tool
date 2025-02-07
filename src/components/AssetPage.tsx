@@ -1,9 +1,16 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useCOCOStore } from "@/store/useCOCOStore";
-import { CircleUser, CalendarDays, CircleDotDashed, Link2 } from "lucide-react";
+import {
+  CircleUser,
+  CalendarDays,
+  CircleDotDashed,
+  Link2,
+  Braces,
+} from "lucide-react";
 import { useAnnotationStore } from "@/store/useAnnotationStore";
 import DialogAddImage from "./DialogAddImage";
 import ImageCard from "./ImageCard";
+import { Button } from "./ui/button";
 
 export default function AssetPage() {
   const { id } = useParams();
@@ -11,8 +18,12 @@ export default function AssetPage() {
     state.datasets.find((d) => d.id === id)
   );
 
-  const { imageFiles, removeImageFromDataset, updateImageLicense } =
-    useCOCOStore();
+  const {
+    imageFiles,
+    removeImageFromDataset,
+    updateImageLicense,
+    exportDatasetToJson,
+  } = useCOCOStore();
   const navigate = useNavigate();
 
   if (!dataset) return <div className="container">Dataset not found</div>;
@@ -37,8 +48,16 @@ export default function AssetPage() {
           <Link2 size="15" />
           <a href={dataset.info.url}>{dataset.info.url}</a>
         </div>
-        <div className="mt-6">
+        <div className="mt-6 flex flex-row gap-6">
           <DialogAddImage datasetId={dataset.id} />
+
+          <Button
+            variant="outline"
+            onClick={() => exportDatasetToJson(dataset.id)}
+          >
+            <Braces />
+            Export JSON
+          </Button>
         </div>
       </div>
 
