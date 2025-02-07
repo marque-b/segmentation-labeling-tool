@@ -12,7 +12,6 @@ import {
   ArrowLeftToLine,
   ArrowRightToLine,
   LucideIcon,
-  Sliders,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -65,7 +64,7 @@ export default function AnnotationControls() {
   return (
     <div
       className={`absolute top-2/5 transform -translate-y-1/2 z-30 
-        bg-gray-800 p-2 rounded-lg shadow-md transition-all
+        bg-card p-2 rounded-lg shadow-md transition-all
         ${collapsed ? "w-[50px]" : "w-[60px]"}`}
     >
       <div className="flex flex-col items-center mb-2">
@@ -105,9 +104,8 @@ export default function AnnotationControls() {
           <Button
             key={mode.id}
             variant="ghost"
-            className={`${activePositionMode === mode.id ? "bg-gray-700" : ""}`}
+            className={`${activePositionMode === mode.id ? "bg-gray-500" : ""}`}
             onClick={() => setActivePositionMode(mode.id)}
-            onTouchStart={() => setActivePositionMode(mode.id)}
           >
             <mode.icon size={16} />
           </Button>
@@ -120,14 +118,11 @@ export default function AnnotationControls() {
         {tools.map((tool) => (
           <Button
             key={tool.id}
-            disabled={true}
+            disabled={classes.length === 0}
             variant="ghost"
-            className={`w-full flex justify-center items-center transition-all duration-200
+            className={`
               ${activeTool === tool.id ? "bg-gray-500" : ""}`}
             onClick={() =>
-              setActiveTool(activeTool === tool.id ? "none" : tool.id)
-            }
-            onTouchStart={() =>
               setActiveTool(activeTool === tool.id ? "none" : tool.id)
             }
           >
@@ -157,6 +152,8 @@ export default function AnnotationControls() {
           )}
         </div>
       </div>
+
+      <div className="border-t my-2 w-full border-gray-600" />
 
       <div className="flex flex-col items-center space-y-2">
         <Button variant="ghost" size="icon">
