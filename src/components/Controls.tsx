@@ -19,6 +19,9 @@ function Controls() {
         <Button variant="outline" onClick={() => navigate("/")}>
           <House />
         </Button>
+        <Button variant="outline" onClick={() => navigate("/test-rle")}>
+          Test
+        </Button>
         <ThemeToggle />
         <Button
           variant="outline"

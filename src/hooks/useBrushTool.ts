@@ -25,10 +25,10 @@ export function useBrushTool(canvas: Canvas | null, active: boolean) {
   useEffect(() => {
     if (!canvas || !active) return;
 
-    const handlePathCreated = () => {
+    const handlePathCreated = async () => {
       saveHistory();
-      const rleMask = generateRLE(canvas);
-      saveMask(rleMask);
+      const rleMask = await generateRLE(canvas);
+      saveMask(rleMask, canvas.width!, canvas.height!);
     };
 
     canvas.on("path:created", handlePathCreated);
@@ -38,7 +38,7 @@ export function useBrushTool(canvas: Canvas | null, active: boolean) {
   }, [canvas, active, saveHistory, saveMask]);
 }
 
-function generateRLE(canvas: Canvas): number[] {
+async function generateRLE(canvas: Canvas): Promise<number[]> {
   const htmlCanvas = canvas.toCanvasElement();
   const ctx = htmlCanvas.getContext("2d")!;
   const width = canvas.width!;
@@ -47,28 +47,33 @@ function generateRLE(canvas: Canvas): number[] {
   const pixels = imageData.data;
   const binaryMask = new Uint8Array(width * height);
 
-  for (let i = 0; i < pixels.length; i += 4) {
-    binaryMask[i / 4] = pixels[i + 3] > 0 ? 1 : 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const index = (y * width + x) * 4;
+      binaryMask[y * width + x] = pixels[index + 3] > 0 ? 1 : 0;
+    }
   }
 
   return encodeRLE(binaryMask);
 }
 
 function encodeRLE(binaryMask: Uint8Array): number[] {
+  if (binaryMask.length === 0) return [];
+
   const rle: number[] = [];
-  let count = 0;
+  let count = 1;
   let current = binaryMask[0];
 
-  for (let i = 0; i < binaryMask.length; i++) {
-    if (binaryMask[i] !== current) {
+  for (let i = 1; i < binaryMask.length; i++) {
+    if (binaryMask[i] === current) {
+      count++;
+    } else {
       rle.push(count);
       count = 1;
       current = binaryMask[i];
-    } else {
-      count++;
     }
   }
-  rle.push(count);
 
+  rle.push(count);
   return rle;
 }

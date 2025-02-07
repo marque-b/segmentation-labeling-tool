@@ -20,6 +20,8 @@ interface HistoryState {
 interface MaskAnnotation {
   id: string;
   classId: string;
+  height: number;
+  width: number;
   rle: number[];
 }
 
@@ -43,7 +45,7 @@ interface AnnotationState {
   undo: () => void;
   redo: () => void;
   setCanvas: (canvas: Canvas) => void;
-  saveMask: (rle: number[]) => void;
+  saveMask: (rle: number[], width: number, height: number) => void;
 }
 
 export const useAnnotationStore = create<AnnotationState>((set, get) => ({
@@ -139,53 +141,92 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     });
   },
   setCanvas: (canvas) => set({ canvas }),
-  saveMask: (rle) => {
+  saveMask: (rle: number[], width: number, height: number) => {
     const { selectedClassId, masks } = get();
     if (!selectedClassId) return;
 
     const existingMaskIndex = masks.findIndex(
-      (mask) => mask.classId === selectedClassId
+      (mask) =>
+        mask.classId === selectedClassId &&
+        mask.width === width &&
+        mask.height === height
     );
 
     if (existingMaskIndex !== -1) {
-      const updatedRLE = mergeRLE(masks[existingMaskIndex].rle, rle);
+      const existingMask = masks[existingMaskIndex];
+      const updatedRLE = mergeRLE(
+        existingMask.rle,
+        rle,
+        existingMask.width,
+        existingMask.height
+      );
+
       const updatedMasks = [...masks];
       updatedMasks[existingMaskIndex] = {
-        ...masks[existingMaskIndex],
+        ...existingMask,
         rle: updatedRLE,
       };
+
       set({ masks: updatedMasks });
     } else {
       set({
-        masks: [...masks, { id: uuidv4(), classId: selectedClassId, rle }],
+        masks: [
+          ...masks,
+          { id: uuidv4(), classId: selectedClassId, width, height, rle },
+        ],
       });
     }
   },
 }));
 
-function mergeRLE(existingRLE: number[], newRLE: number[]): number[] {
-  if (existingRLE.length === 0) return newRLE;
-  if (newRLE.length === 0) return existingRLE;
+function decodeRLE(rle: number[], width: number, height: number): Uint8Array {
+  const binaryMask = new Uint8Array(width * height);
+  let index = 0;
 
-  const merged = [];
-  let i = 0,
-    j = 0;
-  let lastValue = 0;
+  for (let i = 0; i < rle.length; i++) {
+    const value = i % 2 === 0 ? 0 : 1;
+    const count = rle[i];
 
-  while (i < existingRLE.length || j < newRLE.length) {
-    const existingValue = i < existingRLE.length ? existingRLE[i] : 0;
-    const newValue = j < newRLE.length ? newRLE[j] : 0;
-
-    if (lastValue % 2 === 0) {
-      merged.push(existingValue + newValue);
-    } else {
-      merged.push(Math.max(existingValue, newValue));
+    for (let j = 0; j < count; j++) {
+      binaryMask[index++] = value;
     }
-
-    i++;
-    j++;
-    lastValue++;
   }
 
-  return merged;
+  return binaryMask;
+}
+
+function encodeRLE(binaryMask: Uint8Array): number[] {
+  const rle: number[] = [];
+  let count = 0;
+  let current = binaryMask[0];
+
+  for (let i = 0; i < binaryMask.length; i++) {
+    if (binaryMask[i] === current) {
+      count++;
+    } else {
+      rle.push(count);
+      count = 1;
+      current = binaryMask[i];
+    }
+  }
+
+  rle.push(count);
+  return rle;
+}
+
+function mergeRLE(
+  rle1: number[],
+  rle2: number[],
+  width: number,
+  height: number
+): number[] {
+  const mask1 = decodeRLE(rle1, width, height);
+  const mask2 = decodeRLE(rle2, width, height);
+  const mergedMask = new Uint8Array(width * height);
+
+  for (let i = 0; i < mergedMask.length; i++) {
+    mergedMask[i] = mask1[i] | mask2[i];
+  }
+
+  return encodeRLE(mergedMask);
 }
