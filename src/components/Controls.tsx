@@ -3,9 +3,11 @@ import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "./ui/button";
 import { House, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAnnotationStore } from "@/store/useAnnotationStore";
 
 function Controls() {
-  const store = useCOCOStore();
+  const cocoStore = useCOCOStore();
+  const annotationStore = useAnnotationStore();
   const navigate = useNavigate();
 
   return (
@@ -20,9 +22,15 @@ function Controls() {
         <ThemeToggle />
         <Button
           variant="outline"
-          onClick={() => console.log("Zustand State:", store)}
+          onClick={() => console.log("Zustand State:", cocoStore)}
         >
           Log State
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => console.log("Annotation Store:", annotationStore)}
+        >
+          Log Annotations
         </Button>
       </nav>
     </div>
