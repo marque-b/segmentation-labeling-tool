@@ -28,7 +28,6 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
 }
 
-// ✅ Transformado em uma **função normal**, não um hook
 export function renderRLE(
   canvas: Canvas | null,
   rle: number[],

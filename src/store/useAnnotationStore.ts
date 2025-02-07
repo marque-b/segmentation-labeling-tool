@@ -179,7 +179,11 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   },
 }));
 
-function decodeRLE(rle: number[], width: number, height: number): Uint8Array {
+export function decodeRLE(
+  rle: number[],
+  width: number,
+  height: number
+): Uint8Array {
   const binaryMask = new Uint8Array(width * height);
   let index = 0;
 
