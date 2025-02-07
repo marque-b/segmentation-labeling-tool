@@ -5,8 +5,6 @@ import {
   Redo2,
   Save,
   Diameter,
-  LocateFixed,
-  Mouse,
   Eraser,
   Square,
   ArrowLeftToLine,
@@ -15,22 +13,12 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  PositionMode,
-  Tool,
-  useAnnotationStore,
-} from "@/store/useAnnotationStore";
+import { Tool, useAnnotationStore } from "@/store/useAnnotationStore";
 import DialogAddClass from "./DialogAddClass";
 import { Slider } from "./ui/slider";
 
 interface ToolItem {
   id: Tool;
-  icon: LucideIcon;
-  label: string;
-}
-
-interface PositionModeItem {
-  id: PositionMode;
   icon: LucideIcon;
   label: string;
 }
@@ -44,8 +32,6 @@ export default function AnnotationControls() {
     selectClass,
     activeTool,
     setActiveTool,
-    activePositionMode,
-    setActivePositionMode,
     brushSize,
     setBrushSize,
     undo,
@@ -56,11 +42,6 @@ export default function AnnotationControls() {
     { id: "polygon", icon: Waypoints, label: "Polygon" },
     { id: "brush", icon: Brush, label: "Brush" },
     { id: "eraser", icon: Eraser, label: "Eraser" },
-  ];
-
-  const positionModes: PositionModeItem[] = [
-    { id: "precision", icon: LocateFixed, label: "Precision Mode" },
-    { id: "direct", icon: Mouse, label: "Direct Mode" },
   ];
 
   return (
@@ -97,21 +78,6 @@ export default function AnnotationControls() {
           </Button>
         ))}
         <DialogAddClass />
-      </div>
-
-      <div className="border-t my-2 w-full border-gray-600" />
-
-      <div className="flex flex-col items-center space-y-2">
-        {positionModes.map((mode) => (
-          <Button
-            key={mode.id}
-            variant="ghost"
-            className={`${activePositionMode === mode.id ? "bg-gray-500" : ""}`}
-            onClick={() => setActivePositionMode(mode.id)}
-          >
-            <mode.icon size={16} />
-          </Button>
-        ))}
       </div>
 
       <div className="border-t my-2 w-full border-gray-600" />

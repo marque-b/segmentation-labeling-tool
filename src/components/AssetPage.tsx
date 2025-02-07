@@ -11,7 +11,8 @@ export default function AssetPage() {
     state.datasets.find((d) => d.id === id)
   );
 
-  const { imageFiles, removeImageFromDataset } = useCOCOStore();
+  const { imageFiles, removeImageFromDataset, updateImageLicense } =
+    useCOCOStore();
   const navigate = useNavigate();
 
   if (!dataset) return <div className="container">Dataset not found</div>;
@@ -55,7 +56,16 @@ export default function AssetPage() {
                 <ImageCard
                   key={key}
                   fileName={image.file_name}
+                  datasetId={dataset.id}
                   previewUrl={storedFile?.previewUrl}
+                  licenseId={image.license || 8}
+                  onChangeLicense={(newLicenseId: number) =>
+                    updateImageLicense(
+                      dataset.id,
+                      image.file_name,
+                      newLicenseId
+                    )
+                  }
                   onEdit={() => {
                     const imageFile = imageFiles.find(
                       (file) => file.file.name === image.file_name

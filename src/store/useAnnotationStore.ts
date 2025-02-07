@@ -26,6 +26,13 @@ interface MaskAnnotation {
   imageId: string;
 }
 
+interface PolygonAnnotation {
+  id: string;
+  classId: string;
+  imageId: string;
+  points: { x: number; y: number }[];
+}
+
 interface AnnotationState {
   classes: AnnotationClass[];
   selectedClassId: string | null;
@@ -37,6 +44,7 @@ interface AnnotationState {
   canvas: Canvas | null;
   masks: MaskAnnotation[];
   selectedImageId: string;
+  polygons: PolygonAnnotation[];
   setSelectedImageId: (id: string) => void;
   addClass: (name: string, supercategory: string, color: string) => void;
   removeClass: (id: string) => void;
@@ -54,6 +62,7 @@ interface AnnotationState {
     height: number,
     imageId: string
   ) => void;
+  savePolygon: (points: { x: number; y: number }[]) => void;
 }
 
 export const useAnnotationStore = create<AnnotationState>((set, get) => ({
@@ -67,6 +76,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   currentHistoryIndex: -1,
   canvas: null,
   masks: [],
+  polygons: [],
   addClass: (name, supercategory, color) =>
     set((state) => {
       const newClass = { id: uuidv4(), name, supercategory, color };
@@ -195,6 +205,19 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     }
   },
   setSelectedImageId: (id: string) => set({ selectedImageId: id }),
+  savePolygon: (points) => {
+    const { selectedClassId, selectedImageId, polygons } = get();
+    if (!selectedClassId || !selectedImageId) return;
+
+    const newPolygon: PolygonAnnotation = {
+      id: uuidv4(),
+      classId: selectedClassId,
+      imageId: selectedImageId,
+      points,
+    };
+
+    set({ polygons: [...polygons, newPolygon] });
+  },
 }));
 
 export function decodeRLE(

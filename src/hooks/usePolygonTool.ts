@@ -13,7 +13,8 @@ export function usePolygonTool(canvas: Canvas | null, active: boolean) {
     []
   );
   const tempPolygonRef = useRef<Polygon | null>(null);
-  const { selectedClassId, classes, saveHistory } = useAnnotationStore();
+  const { selectedClassId, classes, saveHistory, savePolygon } =
+    useAnnotationStore();
   const activeClass = classes.find((cls) => cls.id === selectedClassId);
   const polygonColor = activeClass ? activeClass.color : "#00ff00";
 
@@ -59,6 +60,8 @@ export function usePolygonTool(canvas: Canvas | null, active: boolean) {
       tempPolygonRef.current = null;
     }
     if (points.length === 0) return;
+    savePolygon(points);
+
     const finalPolygon = new Polygon(points, {
       fill: `${polygonColor}80`,
       stroke: polygonColor,
@@ -78,28 +81,58 @@ export function usePolygonTool(canvas: Canvas | null, active: boolean) {
       if (!canvas) return;
       const pointer = canvas.getScenePoint(event.e);
       const newPoint = { x: pointer.x, y: pointer.y };
-      const circle = new Circle({
-        left: newPoint.x,
-        top: newPoint.y,
-        radius: 5,
-        fill: polygonColor,
-        originX: "center",
-        originY: "center",
-        selectable: true,
-        hasControls: false,
-        data: { temporaryPoint: true },
-      } as any);
-      canvas.add(circle);
-      circle.on("modified", () => {
-        const idx = tempPointsRef.current.findIndex((p) => p.circle === circle);
+
+      let pointObject;
+
+      if (tempPointsRef.current.length === 0) {
+        const firstCircle = new Circle({
+          left: newPoint.x,
+          top: newPoint.y,
+          radius: 5,
+          fill: "#fff",
+          stroke: polygonColor,
+          originX: "center",
+          originY: "center",
+          selectable: true,
+          hasControls: false,
+          data: { firstPoint: true },
+        } as any);
+        pointObject = firstCircle;
+      } else {
+        const circle = new Circle({
+          left: newPoint.x,
+          top: newPoint.y,
+          radius: 5,
+          fill: polygonColor,
+          originX: "center",
+          originY: "center",
+          selectable: true,
+          hasControls: false,
+          data: { temporaryPoint: true },
+        } as any);
+        pointObject = circle;
+      }
+
+      canvas.add(pointObject);
+
+      pointObject.on("modified", () => {
+        const idx = tempPointsRef.current.findIndex(
+          (p) => p.circle === pointObject
+        );
         if (idx !== -1) {
-          tempPointsRef.current[idx].x = circle.left!;
-          tempPointsRef.current[idx].y = circle.top!;
+          tempPointsRef.current[idx].x = pointObject.left!;
+          tempPointsRef.current[idx].y = pointObject.top!;
           updateTempPolygon();
         }
       });
-      tempPointsRef.current.push({ x: newPoint.x, y: newPoint.y, circle });
+
+      tempPointsRef.current.push({
+        x: newPoint.x,
+        y: newPoint.y,
+        circle: pointObject,
+      });
       updateTempPolygon();
+
       const pts = tempPointsRef.current.map((p) => ({ x: p.x, y: p.y }));
       if (pts.length > 2 && isCloseToFirstPoint(pts)) {
         finalizePolygon();

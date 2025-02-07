@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
+import { licenses } from "@/assets/licenses";
 interface Info {
   description: string;
   url: string;
@@ -70,6 +71,11 @@ interface COCOState {
   addImageFile: (datasetId: string, file: File) => void;
   exportDataset: (id: string) => Dataset | undefined;
   removeImageFromDataset: (datasetId: string, fileName: string) => void;
+  updateImageLicense: (
+    datasetId: string,
+    fileName: string,
+    licenseId: number
+  ) => void;
 }
 
 export const useCOCOStore = create<COCOState>()(
@@ -149,9 +155,39 @@ export const useCOCOStore = create<COCOState>()(
           ),
         })),
 
-      exportDataset: (id) =>
-        get().datasets.find((dataset) => dataset.id === id),
+      exportDataset: (id) => {
+        const dataset = get().datasets.find((dataset) => dataset.id === id);
+        if (!dataset) return undefined;
+
+        return {
+          ...dataset,
+          licenses: licenses.filter((license) =>
+            dataset.images.some((image) => image.license === license.id)
+          ),
+        };
+      },
+
+      updateImageLicense: (
+        datasetId: string,
+        fileName: string,
+        newLicenseId: number
+      ) =>
+        set((state) => ({
+          datasets: state.datasets.map((dataset) =>
+            dataset.id === datasetId
+              ? {
+                  ...dataset,
+                  images: dataset.images.map((img) =>
+                    img.file_name === fileName
+                      ? { ...img, license: newLicenseId }
+                      : img
+                  ),
+                }
+              : dataset
+          ),
+        })),
     }),
+
     { name: "COCOStore" }
   )
 );

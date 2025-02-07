@@ -1,12 +1,16 @@
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { PenTool, Trash2 } from "lucide-react";
+import DialogChangeLicense from "./DialogChangeLicense";
 
 interface ImageCardProps {
   fileName: string;
   previewUrl?: string;
+  licenseId: number;
+  onChangeLicense: (newLicenseId: number) => void;
   onEdit: () => void;
   onDelete: () => void;
+  datasetId: string;
 }
 
 export default function ImageCard({
@@ -14,6 +18,9 @@ export default function ImageCard({
   previewUrl,
   onEdit,
   onDelete,
+  licenseId,
+  onChangeLicense,
+  datasetId,
 }: ImageCardProps) {
   return (
     <motion.div
@@ -47,6 +54,13 @@ export default function ImageCard({
           >
             <Trash2 size={16} />
           </button>
+
+          <DialogChangeLicense
+            datasetId={datasetId}
+            fileName={fileName}
+            currentLicenseId={licenseId}
+            onChangeLicense={onChangeLicense}
+          />
         </div>
 
         <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/70 to-transparent p-2 shadow-inner">
