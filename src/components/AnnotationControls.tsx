@@ -12,6 +12,7 @@ import {
   ArrowLeftToLine,
   ArrowRightToLine,
   LucideIcon,
+  Sliders,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import {
   useAnnotationStore,
 } from "@/store/useAnnotationStore";
 import DialogAddClass from "./DialogAddClass";
+import { Slider } from "./ui/slider";
 
 interface ToolItem {
   id: Tool;
@@ -36,6 +38,7 @@ interface PositionModeItem {
 
 export default function AnnotationControls() {
   const [collapsed, setCollapsed] = useState(false);
+  const [showDiameterSlider, setShowDiameterSlider] = useState(false);
   const {
     classes,
     selectedClassId,
@@ -44,6 +47,8 @@ export default function AnnotationControls() {
     setActiveTool,
     activePositionMode,
     setActivePositionMode,
+    brushSize,
+    setBrushSize,
   } = useAnnotationStore();
 
   const tools: ToolItem[] = [
@@ -129,10 +134,30 @@ export default function AnnotationControls() {
             <tool.icon size={18} />
           </Button>
         ))}
-        <Button variant="ghost" size="icon">
-          <Diameter size={16} />
-        </Button>
+
+        <div className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowDiameterSlider(!showDiameterSlider)}
+          >
+            <Diameter size={16} />
+          </Button>
+          {showDiameterSlider && (
+            <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 w-32 px-3 transition-all duration-300 bg-gray-800 rounded-md shadow-md">
+              <Slider
+                value={[brushSize]}
+                onValueChange={(value: number[]) => setBrushSize(value[0])}
+                onTouchEnd={() => setShowDiameterSlider(false)}
+                onMouseLeave={() => setShowDiameterSlider(false)}
+                max={100}
+                step={1}
+              />
+            </div>
+          )}
+        </div>
       </div>
+
       <div className="flex flex-col items-center space-y-2">
         <Button variant="ghost" size="icon">
           <Undo2 size={16} />
