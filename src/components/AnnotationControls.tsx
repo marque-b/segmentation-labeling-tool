@@ -48,6 +48,8 @@ export default function AnnotationControls() {
     setActivePositionMode,
     brushSize,
     setBrushSize,
+    undo,
+    redo,
   } = useAnnotationStore();
 
   const tools: ToolItem[] = [
@@ -156,10 +158,10 @@ export default function AnnotationControls() {
       <div className="border-t my-2 w-full border-gray-600" />
 
       <div className="flex flex-col items-center space-y-2">
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" onClick={() => undo()}>
           <Undo2 size={16} />
         </Button>
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" onClick={() => redo()}>
           <Redo2 size={16} />
         </Button>
       </div>
