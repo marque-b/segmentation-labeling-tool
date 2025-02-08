@@ -34,6 +34,14 @@ export default function EditorPage() {
     };
   }, [imageFile]);
 
+  const dataset = useCOCOStore((state) =>
+    state.datasets.find((d) => d.id === datasetId)
+  );
+
+  if (!dataset || !dataset.images || dataset.images.length === 0) {
+    return <div className="container">No images found in dataset</div>;
+  }
+
   if (!imageFile) return <div className="container">Image not found</div>;
 
   return (

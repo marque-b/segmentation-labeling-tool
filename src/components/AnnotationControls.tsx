@@ -11,6 +11,8 @@ import {
   ArrowRightToLine,
   LucideIcon,
   CircleX,
+  User,
+  Users,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -96,6 +98,7 @@ export default function AnnotationControls() {
     redo,
   } = useAnnotationStore();
   const navigate = useNavigate();
+  const { isCrowded, setIsCrowded } = useAnnotationStore();
 
   const tools: ToolItem[] = [
     { id: "polygon", icon: Waypoints, label: "Polygon" },
@@ -112,6 +115,11 @@ export default function AnnotationControls() {
     brush: "Brush",
     eraser: "Eraser",
     none: "None",
+  };
+
+  const crowdStatus = {
+    0: "Not Crowded",
+    1: "Crowded",
   };
 
   return (
@@ -144,7 +152,7 @@ export default function AnnotationControls() {
         } mb-2 space-y-2`}
       >
         {classes.map((cls) => (
-          <div className="relative">
+          <div className="relative" key={cls.id}>
             {!collapsed && (
               <DeleteClass
                 classId={cls.id}
@@ -153,7 +161,6 @@ export default function AnnotationControls() {
               />
             )}
             <Button
-              key={cls.id}
               variant="ghost"
               className={`flex justify-start items-center transition-colors duration-200
               ${selectedClassId === cls.id ? "bg-opacity-40 bg-gray-500" : ""}
@@ -169,6 +176,37 @@ export default function AnnotationControls() {
           </div>
         ))}
         <DialogAddClass />
+      </div>
+
+      <div className="border-t my-2 w-full border-gray-600" />
+
+      <div
+        className={`flex flex-col ${
+          !collapsed ? "items-end" : "items-center"
+        } mb-2 space-y-2`}
+      >
+        <Button
+          variant="ghost"
+          className={`flex justify-start items-center transition-colors duration-200 
+           ${isCrowded === 0 ? "bg-opacity-40 bg-gray-500" : ""}`}
+          onClick={() => {
+            setIsCrowded(0);
+            toast(`Annotation Type: ${crowdStatus[0]}`);
+          }}
+        >
+          <User size={18} />
+        </Button>
+        <Button
+          variant="ghost"
+          className={`flex justify-start items-center transition-colors duration-200 
+           ${isCrowded === 1 ? "bg-opacity-40 bg-gray-500" : ""}`}
+          onClick={() => {
+            setIsCrowded(1);
+            toast(`Annotation Type: ${crowdStatus[1]}`);
+          }}
+        >
+          <Users size={18} />
+        </Button>
       </div>
 
       <div className="border-t my-2 w-full border-gray-600" />

@@ -19,6 +19,7 @@ interface License {
 }
 
 interface Image {
+  id: number;
   license: number;
   file_name: string;
   coco_url: string;
@@ -158,80 +159,16 @@ export const useCOCOStore = create<COCOState>()(
         })),
 
       exportDataset: (id) => {
-        console.log("Exporting dataset with ID:", id);
-
         const dataset = get().datasets.find((dataset) => dataset.id === id);
-        if (!dataset) {
-          console.warn("Dataset not found.");
-          return undefined;
-        }
+        if (!dataset) return undefined;
 
-        const { masks, polygons } = useAnnotationStore.getState();
-
-        console.log("Dataset Images:", dataset.images);
-        console.log("Masks:", masks);
-        console.log("Polygons:", polygons);
-
-        const annotationMap = new Map(
-          dataset.annotations.map((ann) => [
-            `${ann.image_id}-${ann.category_id}`,
-            ann,
-          ])
-        );
-
-        let annotationIdCounter = 1;
-
-        masks.forEach((mask) => {
-          console.log("Processing mask:", mask);
-
-          const image = dataset.images.find(
-            (img) => img.file_name === mask.imageId
-          );
-
-          if (!image) {
-            console.warn("⚠️ Image not found for mask:", {
-              maskImageId: mask.imageId,
-              datasetImages: dataset.images.map((img) => img.file_name),
-            });
-            return;
-          }
-
-          const imageId = dataset.images.indexOf(image) + 1;
-          const categoryId = Number(mask.classId);
-          const annotationKey = `${imageId}-${categoryId}`;
-
-          console.log(
-            `✅ Found matching image: ${image.file_name} -> Image ID: ${imageId}`
-          );
-
-          if (annotationMap.has(annotationKey)) {
-            const existingAnnotation = annotationMap.get(annotationKey);
-            if (existingAnnotation) {
-              console.log("Updating existing annotation:", existingAnnotation);
-              existingAnnotation.segmentation = [];
-              existingAnnotation.bbox = [0, 0, mask.width, mask.height];
-              existingAnnotation.area = mask.width * mask.height;
-            }
-          } else {
-            console.log("Creating new annotation for mask.");
-            annotationMap.set(annotationKey, {
-              id: annotationIdCounter++,
-              image_id: imageId,
-              category_id: categoryId,
-              segmentation: [],
-              area: mask.width * mask.height,
-              bbox: [0, 0, mask.width, mask.height],
-              iscrowd: 0,
-            });
-          }
-        });
-
-        const allAnnotations = Array.from(annotationMap.values());
-        console.log("Final annotations:", allAnnotations);
+        const { annotations } = useAnnotationStore.getState();
 
         return {
           ...dataset,
-          annotations: allAnnotations,
+          annotations: annotations.filter((ann) =>
+            dataset.images.some((img) => img.id === ann.imageId)
+          ),
         };
       },
 
@@ -280,15 +217,3 @@ export const useCOCOStore = create<COCOState>()(
     { name: "COCOStore" }
   )
 );
-
-function calculateBoundingBox(
-  points: { x: number; y: number }[]
-): [number, number, number, number] {
-  const xs = points.map((p) => p.x);
-  const ys = points.map((p) => p.y);
-  const minX = Math.min(...xs);
-  const minY = Math.min(...ys);
-  const maxX = Math.max(...xs);
-  const maxY = Math.max(...ys);
-  return [minX, minY, maxX - minX, maxY - minY];
-}

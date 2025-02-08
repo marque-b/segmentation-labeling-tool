@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { v4 as uuidv4 } from "uuid";
 import { Canvas } from "fabric";
 
 export type Tool = "polygon" | "brush" | "eraser" | "none";
@@ -17,20 +16,14 @@ interface HistoryState {
   timestamp: number;
 }
 
-interface MaskAnnotation {
-  id: string;
+interface Annotation {
+  id: number;
   classId: number;
-  height: number;
-  width: number;
-  rle: number[];
-  imageId: string;
-}
-
-interface PolygonAnnotation {
-  id: string;
-  classId: number;
-  imageId: string;
-  points: { x: number; y: number }[];
+  imageId: number;
+  segmentation?: number[][] | { counts: number[]; size: [number, number] };
+  area: number;
+  iscrowd: 0 | 1;
+  bbox: [number, number, number, number];
 }
 
 interface AnnotationState {
@@ -42,11 +35,12 @@ interface AnnotationState {
   history: HistoryState[];
   currentHistoryIndex: number;
   canvas: Canvas | null;
-  masks: MaskAnnotation[];
-  selectedImageId: string;
-  polygons: PolygonAnnotation[];
+  annotations: Annotation[];
+  selectedImageId: number | null;
   classIdCounter: number;
-  setSelectedImageId: (id: string) => void;
+  annotationIdCounter: number;
+  isCrowded: 0 | 1;
+  setSelectedImageId: (id: number | null) => void;
   addClass: (name: string, supercategory: string, color: string) => void;
   removeClass: (id: number) => void;
   selectClass: (id: number | null) => void;
@@ -61,9 +55,10 @@ interface AnnotationState {
     rle: number[],
     width: number,
     height: number,
-    imageId: string
+    imageId: number
   ) => void;
   savePolygon: (points: { x: number; y: number }[]) => void;
+  setIsCrowded: (value: 0 | 1) => void;
 }
 
 export const useAnnotationStore = create<AnnotationState>((set, get) => ({
@@ -71,14 +66,15 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   selectedClassId: null,
   classIdCounter: 1,
   activePositionMode: "direct",
-  selectedImageId: "",
+  selectedImageId: null,
   activeTool: "none",
   brushSize: 10,
   history: [],
   currentHistoryIndex: -1,
   canvas: null,
-  masks: [],
-  polygons: [],
+  annotations: [],
+  annotationIdCounter: 1,
+  isCrowded: 0,
 
   addClass: (name, supercategory, color) =>
     set((state) => {
@@ -112,6 +108,8 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   setBrushSize: (size) => set({ brushSize: size }),
 
   setActiveTool: (tool) => set({ activeTool: tool }),
+
+  setIsCrowded: (value) => set({ isCrowded: value }),
 
   saveHistory: () => {
     const { canvas } = get();
@@ -181,65 +179,53 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
   setCanvas: (canvas) => set({ canvas }),
 
-  saveMask: (rle: number[], width: number, height: number, imageId: string) => {
-    const { selectedClassId, masks } = get();
+  setSelectedImageId: (id: number | null) => set({ selectedImageId: id }),
+
+  saveMask: (rle: number[], width: number, height: number, imageId: number) => {
+    const { selectedClassId, annotationIdCounter, annotations, isCrowded } =
+      get();
     if (!selectedClassId) return;
 
-    const existingMaskIndex = masks.findIndex(
-      (mask) =>
-        mask.classId === selectedClassId &&
-        mask.width === width &&
-        mask.height === height &&
-        mask.imageId === imageId
-    );
-
-    if (existingMaskIndex !== -1) {
-      const existingMask = masks[existingMaskIndex];
-      const updatedRLE = mergeRLE(
-        existingMask.rle,
-        rle,
-        existingMask.width,
-        existingMask.height
-      );
-
-      const updatedMasks = [...masks];
-      updatedMasks[existingMaskIndex] = {
-        ...existingMask,
-        rle: updatedRLE,
-      };
-
-      set({ masks: updatedMasks });
-    } else {
-      set({
-        masks: [
-          ...masks,
-          {
-            id: uuidv4(),
-            classId: selectedClassId,
-            width,
-            height,
-            rle,
-            imageId,
-          },
-        ],
-      });
-    }
-  },
-
-  setSelectedImageId: (id: string) => set({ selectedImageId: id }),
-
-  savePolygon: (points) => {
-    const { selectedClassId, selectedImageId, polygons } = get();
-    if (!selectedClassId || !selectedImageId) return;
-
-    const newPolygon: PolygonAnnotation = {
-      id: uuidv4(),
+    const newAnnotation: Annotation = {
+      id: annotationIdCounter,
       classId: selectedClassId,
-      imageId: selectedImageId,
-      points,
+      imageId,
+      segmentation: { counts: rle, size: [height, width] as [number, number] },
+      area: width * height,
+      iscrowd: isCrowded,
+      bbox: [0, 0, width, height],
     };
 
-    set({ polygons: [...polygons, newPolygon] });
+    set({
+      annotations: [...annotations, newAnnotation],
+      annotationIdCounter: annotationIdCounter + 1,
+    });
+  },
+
+  savePolygon: (points) => {
+    const {
+      selectedClassId,
+      selectedImageId,
+      annotationIdCounter,
+      annotations,
+      isCrowded,
+    } = get();
+    if (!selectedClassId || !selectedImageId) return;
+
+    const newAnnotation: Annotation = {
+      id: annotationIdCounter,
+      classId: selectedClassId,
+      imageId: selectedImageId,
+      segmentation: [points.flatMap(({ x, y }) => [x, y])],
+      area: calculateArea(points),
+      iscrowd: isCrowded,
+      bbox: calculateBoundingBox(points),
+    };
+
+    set({
+      annotations: [...annotations, newAnnotation],
+      annotationIdCounter: annotationIdCounter + 1,
+    });
   },
 }));
 
@@ -379,4 +365,25 @@ export function debugSubtractRLE(
 
   console.log("✅ Depois da subtração:", updatedMask);
   return encodeRLE(updatedMask);
+}
+
+function calculateArea(points: { x: number; y: number }[]): number {
+  let area = 0;
+  for (let i = 0; i < points.length; i++) {
+    const j = (i + 1) % points.length;
+    area += points[i].x * points[j].y - points[j].x * points[i].y;
+  }
+  return Math.abs(area / 2);
+}
+
+function calculateBoundingBox(
+  points: { x: number; y: number }[]
+): [number, number, number, number] {
+  const xs = points.map((p) => p.x);
+  const ys = points.map((p) => p.y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const maxX = Math.max(...xs);
+  const maxY = Math.max(...ys);
+  return [minX, minY, maxX - minX, maxY - minY];
 }

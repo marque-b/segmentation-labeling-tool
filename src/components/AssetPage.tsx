@@ -86,14 +86,7 @@ export default function AssetPage() {
                     )
                   }
                   onEdit={() => {
-                    const imageFile = imageFiles.find(
-                      (file) => file.file.name === image.file_name
-                    );
-                    if (imageFile) {
-                      useAnnotationStore
-                        .getState()
-                        .setSelectedImageId(imageFile.id);
-                    }
+                    useAnnotationStore.getState().setSelectedImageId(image.id);
                     navigate(`/editor/${dataset.id}/${image.file_name}`);
                   }}
                   onDelete={() =>
