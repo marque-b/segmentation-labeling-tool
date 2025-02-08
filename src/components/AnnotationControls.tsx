@@ -167,7 +167,7 @@ export default function AnnotationControls() {
               `}
               onClick={() => {
                 selectClass(cls.id);
-                toast(`Class: ${classNames[cls.id]}`);
+                toast(`Categorie: ${classNames[cls.id]}`);
               }}
               onTouchStart={() => selectClass(cls.id)}
             >

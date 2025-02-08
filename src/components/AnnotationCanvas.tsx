@@ -17,7 +17,7 @@ interface AnnotationCanvasProps {
 export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fabricRef = useRef<Canvas | null>(null);
-  const { datasets } = useCOCOStore();
+  const { datasets, updateDatasetCategories } = useCOCOStore();
   const {
     selectedImageId,
     annotations,
@@ -28,6 +28,7 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
     setActiveTool,
     setClasses,
     setHistory,
+    classes,
   } = useAnnotationStore();
 
   const updateDatasetAnnotations = useCOCOStore(
@@ -75,6 +76,12 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
       bbox: ann.bbox,
     }));
 
+    const formattedCategories = classes.map((cls) => ({
+      id: cls.id,
+      name: cls.name,
+      supercategory: cls.supercategory,
+    }));
+
     if (formattedAnnotations.length > 0) {
       updateDatasetAnnotations(
         dataset.id,
@@ -83,6 +90,12 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
       );
     } else {
       console.warn("No valid annotation");
+    }
+
+    if (formattedCategories.length > 0) {
+      updateDatasetCategories(dataset.id, formattedCategories);
+    } else {
+      console.warn("No categories to save");
     }
 
     clearStage();

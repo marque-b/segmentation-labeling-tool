@@ -87,6 +87,7 @@ interface COCOState {
     imageId: number,
     newAnnotations: Annotation[]
   ) => void;
+  updateDatasetCategories: (datasetId: string, categories: Category[]) => void;
 }
 
 export const useCOCOStore = create<COCOState>()(
@@ -218,6 +219,18 @@ export const useCOCOStore = create<COCOState>()(
                       (ann) => ann.segmentation !== null
                     ),
                   ],
+                }
+              : dataset
+          ),
+        })),
+
+      updateDatasetCategories: (datasetId: string, categories: Category[]) =>
+        set((state) => ({
+          datasets: state.datasets.map((dataset) =>
+            dataset.id === datasetId
+              ? {
+                  ...dataset,
+                  categories: [...dataset.categories, ...categories],
                 }
               : dataset
           ),
