@@ -29,7 +29,6 @@ interface Annotation {
 interface AnnotationState {
   classes: AnnotationClass[];
   selectedClassId: number | null;
-  activePositionMode: PositionMode;
   activeTool: Tool;
   brushSize: number;
   history: HistoryState[];
@@ -44,7 +43,6 @@ interface AnnotationState {
   addClass: (name: string, supercategory: string, color: string) => void;
   removeClass: (id: number) => void;
   selectClass: (id: number | null) => void;
-  setActivePositionMode: (mode: PositionMode) => void;
   setBrushSize: (size: number) => void;
   setActiveTool: (tool: Tool) => void;
   saveHistory: () => void;
@@ -68,7 +66,6 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   classes: [],
   selectedClassId: null,
   classIdCounter: 1,
-  activePositionMode: "direct",
   selectedImageId: null,
   activeTool: "none",
   brushSize: 20,
@@ -105,8 +102,6 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     set((state) => ({
       selectedClassId: state.selectedClassId === id ? null : id,
     })),
-
-  setActivePositionMode: (mode) => set({ activePositionMode: mode }),
 
   setBrushSize: (size) => set({ brushSize: size }),
 
@@ -293,88 +288,6 @@ function mergeRLE(
   }
 
   return encodeRLE(mergedMask);
-}
-
-export function subtractRLE(
-  originalRLE: number[],
-  eraseRLE: number[],
-  width: number,
-  height: number
-): number[] {
-  const originalMask = decodeRLE(originalRLE, width, height);
-  const eraseMask = decodeRLE(eraseRLE, width, height);
-  const updatedMask = new Uint8Array(width * height);
-
-  for (let i = 0; i < updatedMask.length; i++) {
-    if (eraseMask[i] === 1 && originalMask[i] === 1) {
-      updatedMask[i] = 0;
-    } else {
-      updatedMask[i] = originalMask[i];
-    }
-  }
-
-  return encodeRLE(updatedMask);
-}
-
-export function decodeRLEForErase(
-  rle: number[],
-  width: number,
-  height: number
-): Uint8Array {
-  const binaryMask = new Uint8Array(width * height);
-  let index = 0;
-
-  for (let i = 0; i < rle.length; i++) {
-    const value = i % 2 === 0 ? 0 : 1; // Alterna entre 0 e 1
-    const count = rle[i];
-
-    for (let j = 0; j < count; j++) {
-      if (index >= binaryMask.length) break;
-      binaryMask[index++] = value;
-    }
-  }
-
-  console.log("Máscara decodificada (para borracha):", binaryMask);
-  return binaryMask;
-}
-
-export function subtractRLEForErase(
-  originalRLE: number[],
-  eraseRLE: number[],
-  width: number,
-  height: number
-): number[] {
-  const originalMask = decodeRLEForErase(originalRLE, width, height);
-  const eraseMask = decodeRLEForErase(eraseRLE, width, height);
-  const updatedMask = new Uint8Array(width * height);
-
-  for (let i = 0; i < updatedMask.length; i++) {
-    updatedMask[i] = eraseMask[i] === 1 ? 0 : originalMask[i];
-  }
-
-  console.log("Depois da subtração:", updatedMask);
-  return encodeRLE(updatedMask);
-}
-
-export function debugSubtractRLE(
-  originalRLE: number[],
-  eraseRLE: number[],
-  width: number,
-  height: number
-): number[] {
-  const originalMask = decodeRLEForErase(originalRLE, width, height);
-  const eraseMask = decodeRLEForErase(eraseRLE, width, height);
-  const updatedMask = new Uint8Array(width * height);
-
-  console.log("🔍 Antes da subtração (máscara original):", originalMask);
-  console.log("🧽 Máscara da borracha:", eraseMask);
-
-  for (let i = 0; i < updatedMask.length; i++) {
-    updatedMask[i] = eraseMask[i] === 1 ? 0 : originalMask[i];
-  }
-
-  console.log("✅ Depois da subtração:", updatedMask);
-  return encodeRLE(updatedMask);
 }
 
 function calculateArea(points: { x: number; y: number }[]): number {

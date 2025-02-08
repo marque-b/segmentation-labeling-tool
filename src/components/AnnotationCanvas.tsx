@@ -4,7 +4,7 @@ import { ImageData } from "./EditorPage";
 import { useAnnotationStore } from "@/store/useAnnotationStore";
 import { usePolygonTool } from "@/hooks/usePolygonTool";
 import { useBrushTool } from "@/hooks/useBrushTool";
-import { useEraserTool } from "@/hooks/useEraserTool";
+// import { useEraserTool } from "@/hooks/useEraserTool";
 // import { useRenderMask } from "@/hooks/useRenderMask";
 import DialogSaveAnnotations from "./DialogSaveAnnotations";
 import { Annotation, useCOCOStore } from "@/store/useCOCOStore";
@@ -172,7 +172,7 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
 
   usePolygonTool(fabricRef.current, activeTool === "polygon");
   useBrushTool(fabricRef.current, activeTool === "brush");
-  useEraserTool(fabricRef.current, activeTool === "eraser");
+  // useEraserTool(fabricRef.current, activeTool === "eraser");
   // useRenderMask(fabricRef.current);
 
   return (
