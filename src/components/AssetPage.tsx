@@ -14,6 +14,7 @@ import { Button } from "./ui/button";
 
 export default function AssetPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const dataset = useCOCOStore((state) =>
     state.datasets.find((d) => d.id === id)
   );
@@ -24,7 +25,6 @@ export default function AssetPage() {
     updateImageLicense,
     exportDatasetToJson,
   } = useCOCOStore();
-  const navigate = useNavigate();
 
   if (!dataset) return <div className="container">Dataset not found</div>;
 
@@ -86,7 +86,9 @@ export default function AssetPage() {
                     )
                   }
                   onEdit={() => {
-                    useAnnotationStore.getState().setSelectedImageId(image.id);
+                    useAnnotationStore
+                      .getState()
+                      .setSelectedImageId(image.id as number);
                     navigate(`/editor/${dataset.id}/${image.file_name}`);
                   }}
                   onDelete={() =>

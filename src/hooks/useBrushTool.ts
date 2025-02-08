@@ -29,7 +29,7 @@ export function useBrushTool(canvas: Canvas | null, active: boolean) {
   }, [canvas, active, brushSize, brushColor]);
 
   useEffect(() => {
-    if (!canvas || !active) return;
+    if (!canvas || !active || selectedImageId === null) return;
 
     const handlePathCreated = async () => {
       saveHistory();
