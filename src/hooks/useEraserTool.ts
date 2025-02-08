@@ -14,12 +14,7 @@ function eraseFromMasks(eraseRLE: number[], width: number, height: number) {
   const updatedMasks = masks.map((mask) => {
     if (mask.imageId !== selectedImageId) return mask;
 
-    console.log("Antes da subtração:", decodeRLE(mask.rle, width, height));
-    console.log("Erase RLE:", decodeRLE(eraseRLE, width, height));
-
     const newRLE = subtractRLEForErase(mask.rle, eraseRLE, width, height);
-
-    console.log("newRLE:", newRLE);
 
     return { ...mask, rle: newRLE };
   });
@@ -57,10 +52,6 @@ export function useEraserTool(canvas: Canvas | null, active: boolean) {
 
     const handlePathCreated = async (event: any) => {
       const eraseRLE = await generateEraseRLE(canvas);
-      console.log(
-        "RLE da borracha (antes de aplicar):",
-        decodeRLE(eraseRLE, canvas.width!, canvas.height!)
-      );
       eraseFromMasks(eraseRLE, canvas.width!, canvas.height!);
 
       canvas.remove(event.path);

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { Canvas } from "fabric";
+import { Annotation } from "./useCOCOStore";
 
 export type Tool = "polygon" | "brush" | "eraser" | "none";
 export type PositionMode = "precision" | "direct";
@@ -15,17 +16,6 @@ interface HistoryState {
   objects: string;
   timestamp: number;
 }
-
-export interface Annotation {
-  id: number;
-  classId: number;
-  imageId: number;
-  segmentation?: number[][] | { counts: number[]; size: [number, number] };
-  area: number;
-  iscrowd: 0 | 1;
-  bbox: [number, number, number, number];
-}
-
 interface AnnotationState {
   classes: AnnotationClass[];
   selectedClassId: number | null;

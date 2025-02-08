@@ -89,7 +89,7 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
     const annotationIdsInState = new Set(annotations.map((ann) => ann.id));
     const annotationIdsInDataset = new Set(
       dataset.annotations
-        .filter((ann) => ann.image_id === selectedImageId)
+        .filter((ann) => ann.imageId === selectedImageId)
         .map((ann) => ann.id)
     );
     const annotationsChanged = [...annotationIdsInState].some(

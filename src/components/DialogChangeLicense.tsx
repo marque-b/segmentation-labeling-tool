@@ -55,7 +55,6 @@ export default function DialogChangeLicense({
   }, [open, currentLicenseId, form]);
 
   const onSubmit = (data: { license: number }) => {
-    console.log("Submitting new license:", data.license);
     updateImageLicense(datasetId, fileName, data.license);
     onChangeLicense(data.license);
     setTimeout(() => setOpen(false), 100);

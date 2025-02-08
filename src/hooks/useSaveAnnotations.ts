@@ -20,7 +20,7 @@ export function useSaveAnnotations() {
     }
 
     const existingAnnotations = dataset.annotations.filter(
-      (ann) => ann.image_id === selectedImageId
+      (ann) => ann.imageId === selectedImageId
     );
     const existingCategories = dataset.categories;
 
@@ -49,14 +49,17 @@ export function useSaveAnnotations() {
       const image = dataset.images.find((img) => img.id === selectedImageId);
 
       const formattedAnnotations = newOrUpdatedAnnotations.map((ann) => ({
-        image_id: selectedImageId,
+        imageId: selectedImageId,
         id: ann.id,
-        category_id: ann.classId,
+        classId: ann.classId,
         segmentation:
           ann.segmentation && Array.isArray(ann.segmentation)
             ? {
                 counts: ann.segmentation.flat(),
-                size: image ? [image.width, image.height] : [0, 0],
+                size:
+                  image && image.width && image.height
+                    ? ([image.width, image.height] as [number, number])
+                    : ([0, 0] as [number, number]),
               }
             : ann.segmentation ?? null,
         area: ann.area,

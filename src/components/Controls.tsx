@@ -25,13 +25,15 @@ function Controls() {
         <ThemeToggle />
         <Button
           variant="outline"
-          onClick={() => console.log("Zustand State:", cocoStore)}
+          onClick={() => console.log("COCO State (export):", cocoStore)}
         >
           Log State
         </Button>
         <Button
           variant="outline"
-          onClick={() => console.log("Annotation Store:", annotationStore)}
+          onClick={() =>
+            console.log("Annotation Store (stage):", annotationStore)
+          }
         >
           Log Annotations
         </Button>
