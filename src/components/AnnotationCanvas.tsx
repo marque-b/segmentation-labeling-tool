@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Canvas } from "fabric";
 import { ImageData } from "./EditorPage";
 import { useAnnotationStore } from "@/store/useAnnotationStore";
@@ -6,6 +6,9 @@ import { usePolygonTool } from "@/hooks/usePolygonTool";
 import { useBrushTool } from "@/hooks/useBrushTool";
 import { useEraserTool } from "@/hooks/useEraserTool";
 // import { useRenderMask } from "@/hooks/useRenderMask";
+import DialogSaveAnnotations from "./DialogSaveAnnotations";
+import { Annotation, useCOCOStore } from "@/store/useCOCOStore";
+import { useBlocker, useNavigate } from "react-router-dom";
 
 interface AnnotationCanvasProps {
   imageData: ImageData;
@@ -14,11 +17,109 @@ interface AnnotationCanvasProps {
 export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fabricRef = useRef<Canvas | null>(null);
-  const { activeTool } = useAnnotationStore();
-  const setCanvas = useAnnotationStore((state) => state.setCanvas);
+  const { datasets } = useCOCOStore();
+  const {
+    selectedImageId,
+    annotations,
+    setCanvas,
+    activeTool,
+    setAnnotations,
+    setSelectedImageId,
+    setActiveTool,
+    setClasses,
+    setHistory,
+  } = useAnnotationStore();
+
+  const updateDatasetAnnotations = useCOCOStore(
+    (state) => state.updateDatasetAnnotations
+  );
+
+  const navigate = useNavigate();
+  const blocker = useBlocker(() => annotations.length > 0);
+
+  const [showDialog, setShowDialog] = useState(false);
+  const [nextLocation, setNextLocation] = useState<string | null>(null);
+
+  const clearStage = () => {
+    setAnnotations([]);
+    setSelectedImageId(null);
+    setActiveTool("none");
+    setClasses([]);
+    setHistory([]);
+
+    if (fabricRef.current) {
+      fabricRef.current.dispose();
+      fabricRef.current = null;
+    }
+  };
+
+  const handleSaveAnnotations = () => {
+    if (!selectedImageId || annotations.length === 0) return;
+
+    const dataset = datasets.find((d) =>
+      d.images.some((img) => img.id === selectedImageId)
+    );
+
+    if (!dataset) {
+      console.error("Dataset not found for selected image");
+      return;
+    }
+
+    const formattedAnnotations: Annotation[] = annotations.map((ann) => ({
+      id: ann.id,
+      image_id: selectedImageId!,
+      category_id: ann.classId,
+      segmentation: ann.segmentation || [],
+      area: ann.area,
+      iscrowd: ann.iscrowd,
+      bbox: ann.bbox,
+    }));
+
+    if (formattedAnnotations.length > 0) {
+      updateDatasetAnnotations(
+        dataset.id,
+        selectedImageId!,
+        formattedAnnotations
+      );
+    } else {
+      console.warn("No valid annotation");
+    }
+
+    clearStage();
+
+    setShowDialog(false);
+
+    if (blocker.state === "blocked" && blocker.proceed) {
+      blocker.proceed();
+    } else if (nextLocation) {
+      navigate(nextLocation || "/");
+    }
+  };
+
+  const handleDiscardAnnotations = () => {
+    clearStage();
+    setShowDialog(false);
+
+    if (blocker.state === "blocked" && blocker.proceed) {
+      blocker.proceed();
+    } else {
+      navigate(nextLocation || "/");
+    }
+  };
+
+  useEffect(() => {
+    if (blocker.state === "blocked" && blocker.location) {
+      setNextLocation(blocker.location.pathname);
+    }
+  }, [blocker]);
 
   useEffect(() => {
     if (!canvasRef.current || !imageData) return;
+
+    if (fabricRef.current) {
+      fabricRef.current.dispose();
+      fabricRef.current = null;
+    }
 
     const canvas = new Canvas(canvasRef.current, {
       width: imageData.width,
@@ -47,7 +148,12 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
     canvas.on("object:added", () => lockAllObjects());
 
     return () => {
-      canvas.dispose();
+      if (annotations.length > 0) {
+        setShowDialog(true);
+      } else {
+        fabricRef.current?.dispose();
+        fabricRef.current = null;
+      }
     };
   }, [imageData]);
 
@@ -56,5 +162,18 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
   useEraserTool(fabricRef.current, activeTool === "eraser");
   // useRenderMask(fabricRef.current);
 
-  return <canvas ref={canvasRef} className="canvas" />;
+  return (
+    <>
+      <canvas ref={canvasRef} className="canvas" />
+
+      <DialogSaveAnnotations
+        open={showDialog || blocker.state === "blocked"}
+        onClose={() => {
+          setShowDialog(false);
+        }}
+        onSave={handleSaveAnnotations}
+        onDiscard={handleDiscardAnnotations}
+      />
+    </>
+  );
 }

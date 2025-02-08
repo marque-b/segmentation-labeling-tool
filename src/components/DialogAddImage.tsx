@@ -65,9 +65,11 @@ export default function DialogAddImage({ datasetId }: DialogAddImageProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
+      setImagePreview(URL.createObjectURL(file));
+
       form.setValue("file_name", file.name);
       form.setValue("date_captured", new Date(file.lastModified).toISOString());
-      setSelectedFile(file);
 
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -86,15 +88,22 @@ export default function DialogAddImage({ datasetId }: DialogAddImageProps) {
 
   const onSubmit = (data: Image) => {
     if (selectedFile) {
-      addImageFile(datasetId, selectedFile);
+      const renamedFile = new File([selectedFile], data.file_name, {
+        type: selectedFile.type,
+      });
+      addImageFile(datasetId, renamedFile);
     }
 
     const fixedData = {
       ...data,
       coco_url: data.coco_url || "",
       flickr_url: data.flickr_url || "",
+      height: data.height,
+      width: data.width,
+      license: data.license || 1,
+      file_name: data.file_name || `image_${Date.now()}.jpg`,
+      date_captured: data.date_captured || new Date().toISOString(),
     };
-
     addImageToDataset(datasetId, fixedData);
     form.reset();
     setImagePreview(null);
@@ -148,7 +157,7 @@ export default function DialogAddImage({ datasetId }: DialogAddImageProps) {
                 <FormItem>
                   <FormLabel>File Name</FormLabel>
                   <FormControl>
-                    <Input {...field} disabled />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -162,7 +171,7 @@ export default function DialogAddImage({ datasetId }: DialogAddImageProps) {
                 <FormItem>
                   <FormLabel>Date Captured</FormLabel>
                   <FormControl>
-                    <Input {...field} disabled />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -176,7 +185,12 @@ export default function DialogAddImage({ datasetId }: DialogAddImageProps) {
                 <FormItem>
                   <FormLabel>Width</FormLabel>
                   <FormControl>
-                    <Input type="number" {...field} disabled />
+                    <Input
+                      type="number"
+                      {...field}
+                      disabled
+                      className="w-full"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -190,7 +204,12 @@ export default function DialogAddImage({ datasetId }: DialogAddImageProps) {
                 <FormItem>
                   <FormLabel>Height</FormLabel>
                   <FormControl>
-                    <Input type="number" {...field} disabled />
+                    <Input
+                      type="number"
+                      {...field}
+                      disabled
+                      className="w-full"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -59,6 +59,9 @@ interface AnnotationState {
   ) => void;
   savePolygon: (points: { x: number; y: number }[]) => void;
   setIsCrowded: (value: 0 | 1) => void;
+  setAnnotations: (annotations: Annotation[]) => void;
+  setHistory: (history: HistoryState[]) => void;
+  setClasses: (classes: AnnotationClass[]) => void;
 }
 
 export const useAnnotationStore = create<AnnotationState>((set, get) => ({
@@ -68,7 +71,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   activePositionMode: "direct",
   selectedImageId: null,
   activeTool: "none",
-  brushSize: 10,
+  brushSize: 20,
   history: [],
   currentHistoryIndex: -1,
   canvas: null,
@@ -110,6 +113,13 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   setActiveTool: (tool) => set({ activeTool: tool }),
 
   setIsCrowded: (value) => set({ isCrowded: value }),
+
+  setAnnotations: (annotations: Annotation[]) => set({ annotations }),
+
+  setHistory: (history) => set({ history, currentHistoryIndex: -1 }),
+
+  setClasses: (classes) =>
+    set({ classes, classIdCounter: 1, selectedClassId: null }),
 
   saveHistory: () => {
     const { canvas } = get();

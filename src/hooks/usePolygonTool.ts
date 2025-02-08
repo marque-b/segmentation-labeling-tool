@@ -60,8 +60,9 @@ export function usePolygonTool(canvas: Canvas | null, active: boolean) {
       tempPolygonRef.current = null;
     }
     if (points.length === 0) return;
-    savePolygon(points);
-
+    if (points.length > 2) {
+      savePolygon(points);
+    }
     const finalPolygon = new Polygon(points, {
       fill: `${polygonColor}80`,
       stroke: polygonColor,
@@ -78,7 +79,7 @@ export function usePolygonTool(canvas: Canvas | null, active: boolean) {
     if (!canvas || !active) return;
 
     const handleCanvasClick = (event: TPointerEventInfo<TPointerEvent>) => {
-      if (!canvas) return;
+      if (!canvas || !active) return;
       const pointer = canvas.getScenePoint(event.e);
       const newPoint = { x: pointer.x, y: pointer.y };
 
@@ -147,7 +148,7 @@ export function usePolygonTool(canvas: Canvas | null, active: boolean) {
 
   useEffect(() => {
     if (!active && canvas) {
-      tempPointsRef.current.forEach((p) => canvas.remove(p.circle));
+      tempPointsRef.current.forEach((p) => p.circle && canvas.remove(p.circle));
       tempPointsRef.current = [];
       if (tempPolygonRef.current) {
         canvas.remove(tempPolygonRef.current);

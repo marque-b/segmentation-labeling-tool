@@ -19,7 +19,7 @@ interface License {
 }
 
 interface Image {
-  id: number;
+  id?: number;
   license: number;
   file_name: string;
   coco_url: string;
@@ -37,8 +37,11 @@ export interface ImageFile {
 }
 
 type Segmentation = number[] | number[][];
-interface Annotation {
-  segmentation: Segmentation[];
+export interface Annotation {
+  segmentation:
+    | Segmentation[]
+    | { counts: number[]; size: [number, number] }
+    | null;
   area: number;
   iscrowd: number;
   image_id: number;
@@ -79,6 +82,11 @@ interface COCOState {
     licenseId: number
   ) => void;
   exportDatasetToJson: (datasetId: string) => void;
+  updateDatasetAnnotations: (
+    datasetId: string,
+    imageId: number,
+    newAnnotations: Annotation[]
+  ) => void;
 }
 
 export const useCOCOStore = create<COCOState>()(
@@ -187,6 +195,29 @@ export const useCOCOStore = create<COCOState>()(
                       ? { ...img, license: newLicenseId }
                       : img
                   ),
+                }
+              : dataset
+          ),
+        })),
+
+      updateDatasetAnnotations: (
+        datasetId: string,
+        imageId: number,
+        newAnnotations: Annotation[]
+      ) =>
+        set((state) => ({
+          datasets: state.datasets.map((dataset) =>
+            dataset.id === datasetId
+              ? {
+                  ...dataset,
+                  annotations: [
+                    ...dataset.annotations.filter(
+                      (ann) => ann.image_id !== imageId
+                    ),
+                    ...newAnnotations.filter(
+                      (ann) => ann.segmentation !== null
+                    ),
+                  ],
                 }
               : dataset
           ),
