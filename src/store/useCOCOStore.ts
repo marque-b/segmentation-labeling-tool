@@ -54,6 +54,7 @@ interface Category {
   supercategory: string;
   id: number;
   name: string;
+  color: string;
 }
 
 export interface Dataset {
@@ -230,7 +231,12 @@ export const useCOCOStore = create<COCOState>()(
             dataset.id === datasetId
               ? {
                   ...dataset,
-                  categories: [...dataset.categories, ...categories],
+                  categories: categories.map((cat) => ({
+                    id: cat.id,
+                    name: cat.name,
+                    supercategory: cat.supercategory,
+                    color: cat.color ?? "#000000",
+                  })),
                 }
               : dataset
           ),

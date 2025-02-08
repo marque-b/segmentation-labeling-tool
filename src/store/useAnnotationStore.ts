@@ -4,7 +4,7 @@ import { Canvas } from "fabric";
 export type Tool = "polygon" | "brush" | "eraser" | "none";
 export type PositionMode = "precision" | "direct";
 
-interface AnnotationClass {
+export interface AnnotationClass {
   id: number;
   name: string;
   supercategory: string;
@@ -16,7 +16,7 @@ interface HistoryState {
   timestamp: number;
 }
 
-interface Annotation {
+export interface Annotation {
   id: number;
   classId: number;
   imageId: number;

@@ -80,6 +80,7 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
       id: cls.id,
       name: cls.name,
       supercategory: cls.supercategory,
+      color: cls.color,
     }));
 
     if (formattedAnnotations.length > 0) {
@@ -119,6 +120,39 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
       navigate(nextLocation || "/");
     }
   };
+
+  const hasUnsavedChanges = () => {
+    if (!selectedImageId) return false;
+
+    const dataset = datasets.find((d) =>
+      d.images.some((img) => img.id === selectedImageId)
+    );
+
+    if (!dataset) return false;
+
+    const datasetAnnotations = dataset.annotations.filter(
+      (ann) => ann.image_id === selectedImageId
+    );
+
+    const annotationsChanged =
+      JSON.stringify(annotations) !== JSON.stringify(datasetAnnotations);
+
+    const datasetCategories = dataset.categories;
+    const categoriesChanged =
+      JSON.stringify(classes) !== JSON.stringify(datasetCategories);
+
+    return annotationsChanged || categoriesChanged;
+  };
+
+  useEffect(() => {
+    if (blocker.state === "blocked") {
+      if (hasUnsavedChanges()) {
+        setShowDialog(true);
+      } else {
+        blocker.proceed();
+      }
+    }
+  }, [blocker.state]);
 
   useEffect(() => {
     if (blocker.state === "blocked" && blocker.location) {
@@ -182,6 +216,7 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
       <DialogSaveAnnotations
         open={showDialog || blocker.state === "blocked"}
         onClose={() => {
+          blocker.state = "unblocked";
           setShowDialog(false);
         }}
         onSave={handleSaveAnnotations}
