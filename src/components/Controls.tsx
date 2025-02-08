@@ -13,14 +13,14 @@ function Controls() {
   return (
     <div className="container">
       <nav className="flex justify-end items-center min-h-14 gap-2">
+        <Button variant="outline" onClick={() => navigate("/test-rle")}>
+          Test
+        </Button>
         <Button variant="outline" onClick={() => navigate(-1)}>
           <ChevronLeft />
         </Button>
         <Button variant="outline" onClick={() => navigate("/")}>
           <House />
-        </Button>
-        <Button variant="outline" onClick={() => navigate("/test-rle")}>
-          Test
         </Button>
         <ThemeToggle />
         <Button

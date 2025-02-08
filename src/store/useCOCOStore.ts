@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import { licenses } from "@/assets/licenses";
 import { useAnnotationStore } from "./useAnnotationStore";
+
 interface Info {
   description: string;
   url: string;
@@ -156,6 +156,7 @@ export const useCOCOStore = create<COCOState>()(
             (file) => file.file.name !== fileName
           ),
         })),
+
       exportDataset: (id) => {
         console.log("Exporting dataset with ID:", id);
 
@@ -183,7 +184,6 @@ export const useCOCOStore = create<COCOState>()(
         masks.forEach((mask) => {
           console.log("Processing mask:", mask);
 
-          // Ensure imageId is being correctly compared
           const image = dataset.images.find(
             (img) => img.file_name === mask.imageId
           );
@@ -254,6 +254,7 @@ export const useCOCOStore = create<COCOState>()(
               : dataset
           ),
         })),
+
       exportDatasetToJson: (datasetId: string) => {
         const dataset = get().exportDataset(datasetId);
         if (!dataset) {

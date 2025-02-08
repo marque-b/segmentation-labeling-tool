@@ -6,7 +6,7 @@ export type Tool = "polygon" | "brush" | "eraser" | "none";
 export type PositionMode = "precision" | "direct";
 
 interface AnnotationClass {
-  id: string;
+  id: number;
   name: string;
   supercategory: string;
   color: string;
@@ -19,7 +19,7 @@ interface HistoryState {
 
 interface MaskAnnotation {
   id: string;
-  classId: string;
+  classId: number;
   height: number;
   width: number;
   rle: number[];
@@ -28,14 +28,14 @@ interface MaskAnnotation {
 
 interface PolygonAnnotation {
   id: string;
-  classId: string;
+  classId: number;
   imageId: string;
   points: { x: number; y: number }[];
 }
 
 interface AnnotationState {
   classes: AnnotationClass[];
-  selectedClassId: string | null;
+  selectedClassId: number | null;
   activePositionMode: PositionMode;
   activeTool: Tool;
   brushSize: number;
@@ -45,10 +45,11 @@ interface AnnotationState {
   masks: MaskAnnotation[];
   selectedImageId: string;
   polygons: PolygonAnnotation[];
+  classIdCounter: number;
   setSelectedImageId: (id: string) => void;
   addClass: (name: string, supercategory: string, color: string) => void;
-  removeClass: (id: string) => void;
-  selectClass: (id: string) => void;
+  removeClass: (id: number) => void;
+  selectClass: (id: number | null) => void;
   setActivePositionMode: (mode: PositionMode) => void;
   setBrushSize: (size: number) => void;
   setActiveTool: (tool: Tool) => void;
@@ -68,34 +69,50 @@ interface AnnotationState {
 export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   classes: [],
   selectedClassId: null,
+  classIdCounter: 1,
   activePositionMode: "direct",
   selectedImageId: "",
   activeTool: "none",
-  brushSize: 5,
+  brushSize: 10,
   history: [],
   currentHistoryIndex: -1,
   canvas: null,
   masks: [],
   polygons: [],
+
   addClass: (name, supercategory, color) =>
     set((state) => {
-      const newClass = { id: uuidv4(), name, supercategory, color };
+      const newClass = {
+        id: state.classIdCounter,
+        name,
+        supercategory,
+        color,
+      };
       return {
         classes: [...state.classes, newClass],
         selectedClassId: newClass.id,
+        classIdCounter: state.classIdCounter + 1,
       };
     }),
-  removeClass: (id) =>
+
+  removeClass: (id: number) =>
     set((state) => ({
       classes: state.classes.filter((c) => c.id !== id),
+      selectedClassId:
+        state.selectedClassId === id ? null : state.selectedClassId,
     })),
-  selectClass: (id) =>
+
+  selectClass: (id: number | null) =>
     set((state) => ({
       selectedClassId: state.selectedClassId === id ? null : id,
     })),
+
   setActivePositionMode: (mode) => set({ activePositionMode: mode }),
+
   setBrushSize: (size) => set({ brushSize: size }),
+
   setActiveTool: (tool) => set({ activeTool: tool }),
+
   saveHistory: () => {
     const { canvas } = get();
     if (!canvas) return;
@@ -113,6 +130,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       };
     });
   },
+
   undo: () => {
     const { canvas, currentHistoryIndex, history } = get();
     if (!canvas || currentHistoryIndex <= 0) return;
@@ -136,6 +154,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       set({ currentHistoryIndex: currentHistoryIndex - 1 });
     });
   },
+
   redo: () => {
     const { canvas, currentHistoryIndex, history } = get();
     if (!canvas || currentHistoryIndex >= history.length - 1) return;
@@ -159,7 +178,9 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       set({ currentHistoryIndex: currentHistoryIndex + 1 });
     });
   },
+
   setCanvas: (canvas) => set({ canvas }),
+
   saveMask: (rle: number[], width: number, height: number, imageId: string) => {
     const { selectedClassId, masks } = get();
     if (!selectedClassId) return;
@@ -204,7 +225,9 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       });
     }
   },
+
   setSelectedImageId: (id: string) => set({ selectedImageId: id }),
+
   savePolygon: (points) => {
     const { selectedClassId, selectedImageId, polygons } = get();
     if (!selectedClassId || !selectedImageId) return;

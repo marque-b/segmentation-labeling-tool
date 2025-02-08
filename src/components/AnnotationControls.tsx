@@ -10,6 +10,7 @@ import {
   ArrowLeftToLine,
   ArrowRightToLine,
   LucideIcon,
+  CircleX,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,15 @@ import { Tool, useAnnotationStore } from "@/store/useAnnotationStore";
 import DialogAddClass from "./DialogAddClass";
 import { Slider } from "./ui/slider";
 import { useNavigate } from "react-router-dom";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "./ui/dialog";
+import { toast } from "sonner";
 
 interface ToolItem {
   id: Tool;
@@ -24,8 +34,55 @@ interface ToolItem {
   label: string;
 }
 
+const DeleteClass = ({
+  classId,
+  className,
+  supercategory,
+}: {
+  classId: number;
+  className: string;
+  supercategory: string;
+}) => {
+  const { removeClass, selectedClassId, selectClass } = useAnnotationStore();
+
+  const handleDelete = () => {
+    removeClass(classId);
+    if (selectedClassId === classId) {
+      selectClass(null);
+    }
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button className="absolute left-[-40px] bg-transparent hover:bg-transparent hover:scale-110">
+          <CircleX
+            size={15}
+            color="red"
+            className="bg-[#081026] rounded-full"
+          />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Class</DialogTitle>
+        </DialogHeader>
+        <p>
+          Are you sure you want to delete the class <b>{className}</b> in the{" "}
+          <b>{supercategory}</b> category?
+        </p>
+        <DialogFooter>
+          <Button variant="destructive" onClick={handleDelete}>
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default function AnnotationControls() {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [showDiameterSlider, setShowDiameterSlider] = useState(false);
   const {
     classes,
@@ -46,18 +103,29 @@ export default function AnnotationControls() {
     { id: "eraser", icon: Eraser, label: "Eraser" },
   ];
 
+  const classNames = Object.fromEntries(
+    classes.map((cls) => [cls.id, cls.name])
+  );
+
+  const toolNames: { [key in Tool]: string } = {
+    polygon: "Polygon",
+    brush: "Brush",
+    eraser: "Eraser",
+    none: "None",
+  };
+
   return (
     <div
       className={`absolute top-2/5 transform -translate-y-1/2 z-30 
         bg-card p-2 rounded-lg shadow-md transition-all
-        ${collapsed ? "w-[50px]" : "w-[60px]"}`}
+        ${collapsed ? "w-[50px]" : "w-[90px]"}`}
     >
-      <div className="flex flex-col items-center mb-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setCollapsed(!collapsed)}
-        >
+      <div
+        className={`flex flex-col ${
+          !collapsed ? "items-end" : "items-center"
+        } mb-2 space-y-2`}
+      >
+        <Button variant="ghost" onClick={() => setCollapsed(!collapsed)}>
           {collapsed ? <ArrowRightToLine /> : <ArrowLeftToLine />}
         </Button>
         <Button
@@ -65,32 +133,51 @@ export default function AnnotationControls() {
             navigate("/");
           }}
           variant="ghost"
-          size="icon"
         >
-          <Save size={18} />
+          <Save size={16} />
         </Button>
       </div>
 
-      <div className="flex flex-col items-center space-y-2">
+      <div
+        className={`flex flex-col ${
+          !collapsed ? "items-end" : "items-center"
+        } mb-2 space-y-2`}
+      >
         {classes.map((cls) => (
-          <Button
-            key={cls.id}
-            variant="ghost"
-            className={`flex justify-start items-center transition-colors duration-200
+          <div className="relative">
+            {!collapsed && (
+              <DeleteClass
+                classId={cls.id}
+                className={cls.name}
+                supercategory={cls.supercategory}
+              />
+            )}
+            <Button
+              key={cls.id}
+              variant="ghost"
+              className={`flex justify-start items-center transition-colors duration-200
               ${selectedClassId === cls.id ? "bg-opacity-40 bg-gray-500" : ""}
-            `}
-            onClick={() => selectClass(cls.id)}
-            onTouchStart={() => selectClass(cls.id)}
-          >
-            <Square size={16} color={cls.color} />
-          </Button>
+              `}
+              onClick={() => {
+                selectClass(cls.id);
+                toast(`Class: ${classNames[cls.id]}`);
+              }}
+              onTouchStart={() => selectClass(cls.id)}
+            >
+              <Square size={16} color={cls.color} />
+            </Button>
+          </div>
         ))}
         <DialogAddClass />
       </div>
 
       <div className="border-t my-2 w-full border-gray-600" />
 
-      <div className="flex flex-col items-center space-y-2">
+      <div
+        className={`flex flex-col ${
+          !collapsed ? "items-end" : "items-center"
+        } mb-2 space-y-2`}
+      >
         {tools.map((tool) => (
           <Button
             key={tool.id}
@@ -98,9 +185,13 @@ export default function AnnotationControls() {
             variant="ghost"
             className={`
               ${activeTool === tool.id ? "bg-gray-500" : ""}`}
-            onClick={() =>
-              setActiveTool(activeTool === tool.id ? "none" : tool.id)
-            }
+            onClick={() => {
+              const newTool = activeTool === tool.id ? "none" : tool.id;
+              setActiveTool(newTool);
+              if (newTool !== "none") {
+                toast(`Tool: ${toolNames[newTool]}`);
+              }
+            }}
           >
             <tool.icon size={18} />
           </Button>
@@ -109,7 +200,6 @@ export default function AnnotationControls() {
         <div className="relative">
           <Button
             variant="ghost"
-            size="icon"
             onClick={() => {
               setShowDiameterSlider(!showDiameterSlider);
               setActiveTool("none");
@@ -134,11 +224,15 @@ export default function AnnotationControls() {
 
       <div className="border-t my-2 w-full border-gray-600" />
 
-      <div className="flex flex-col items-center space-y-2">
-        <Button variant="ghost" size="icon" onClick={() => undo()}>
+      <div
+        className={`flex flex-col ${
+          !collapsed ? "items-end" : "items-center"
+        } mb-2 space-y-2`}
+      >
+        <Button variant="ghost" onClick={() => undo()}>
           <Undo2 size={16} />
         </Button>
-        <Button variant="ghost" size="icon" onClick={() => redo()}>
+        <Button variant="ghost" onClick={() => redo()}>
           <Redo2 size={16} />
         </Button>
       </div>

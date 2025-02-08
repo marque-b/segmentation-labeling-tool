@@ -3,6 +3,7 @@ import Controls from "./components/Controls";
 import Workspace from "./components/Workspace";
 import AssetPage from "./components/AssetPage";
 import EditorPage from "./components/EditorPage";
+import { Toaster } from "@/components/ui/sonner";
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route path="/editor/:datasetId/:fileName" element={<EditorPage />} />
         </Routes>
       </main>
+      <Toaster />
     </Router>
   );
 }
