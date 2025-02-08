@@ -7,8 +7,9 @@ import { useBrushTool } from "@/hooks/useBrushTool";
 // import { useEraserTool } from "@/hooks/useEraserTool";
 // import { useRenderMask } from "@/hooks/useRenderMask";
 import DialogSaveAnnotations from "./DialogSaveAnnotations";
-import { Annotation, useCOCOStore } from "@/store/useCOCOStore";
+import { useCOCOStore } from "@/store/useCOCOStore";
 import { useBlocker, useNavigate } from "react-router-dom";
+import { useSaveAnnotations } from "@/hooks/useSaveAnnotations";
 
 interface AnnotationCanvasProps {
   imageData: ImageData;
@@ -17,7 +18,7 @@ interface AnnotationCanvasProps {
 export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fabricRef = useRef<Canvas | null>(null);
-  const { datasets, updateDatasetCategories } = useCOCOStore();
+  const { datasets } = useCOCOStore();
   const {
     selectedImageId,
     annotations,
@@ -31,12 +32,9 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
     classes,
   } = useAnnotationStore();
 
-  const updateDatasetAnnotations = useCOCOStore(
-    (state) => state.updateDatasetAnnotations
-  );
-
   const navigate = useNavigate();
   const blocker = useBlocker(() => annotations.length > 0);
+  const { saveAnnotations } = useSaveAnnotations();
 
   const [showDialog, setShowDialog] = useState(false);
   const [nextLocation, setNextLocation] = useState<string | null>(null);
@@ -55,49 +53,7 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
   };
 
   const handleSaveAnnotations = () => {
-    if (!selectedImageId || annotations.length === 0) return;
-
-    const dataset = datasets.find((d) =>
-      d.images.some((img) => img.id === selectedImageId)
-    );
-
-    if (!dataset) {
-      console.error("Dataset not found for selected image");
-      return;
-    }
-
-    const formattedAnnotations: Annotation[] = annotations.map((ann) => ({
-      id: ann.id,
-      image_id: selectedImageId!,
-      category_id: ann.classId,
-      segmentation: ann.segmentation || [],
-      area: ann.area,
-      iscrowd: ann.iscrowd,
-      bbox: ann.bbox,
-    }));
-
-    const formattedCategories = classes.map((cls) => ({
-      id: cls.id,
-      name: cls.name,
-      supercategory: cls.supercategory,
-      color: cls.color,
-    }));
-
-    if (formattedAnnotations.length > 0) {
-      updateDatasetAnnotations(
-        dataset.id,
-        selectedImageId!,
-        formattedAnnotations
-      );
-    } else {
-      console.warn("No valid annotation");
-    }
-
-    if (formattedCategories.length > 0) {
-      updateDatasetCategories(dataset.id, formattedCategories);
-    } else {
-      console.warn("No categories to save");
-    }
+    saveAnnotations();
 
     clearStage();
 
@@ -130,16 +86,23 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
 
     if (!dataset) return false;
 
-    const datasetAnnotations = dataset.annotations.filter(
-      (ann) => ann.image_id === selectedImageId
+    const annotationIdsInState = new Set(annotations.map((ann) => ann.id));
+    const annotationIdsInDataset = new Set(
+      dataset.annotations
+        .filter((ann) => ann.image_id === selectedImageId)
+        .map((ann) => ann.id)
+    );
+    const annotationsChanged = [...annotationIdsInState].some(
+      (id) => !annotationIdsInDataset.has(id)
     );
 
-    const annotationsChanged =
-      JSON.stringify(annotations) !== JSON.stringify(datasetAnnotations);
-
-    const datasetCategories = dataset.categories;
-    const categoriesChanged =
-      JSON.stringify(classes) !== JSON.stringify(datasetCategories);
+    const categoryIdsInState = new Set(classes.map((cls) => cls.id));
+    const categoryIdsInDataset = new Set(
+      dataset.categories.map((cls) => cls.id)
+    );
+    const categoriesChanged = [...categoryIdsInState].some(
+      (id) => !categoryIdsInDataset.has(id)
+    );
 
     return annotationsChanged || categoriesChanged;
   };

@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Tool, useAnnotationStore } from "@/store/useAnnotationStore";
 import DialogAddClass from "./DialogAddClass";
 import { Slider } from "./ui/slider";
-import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogTrigger,
@@ -29,6 +28,7 @@ import {
   DialogFooter,
 } from "./ui/dialog";
 import { toast } from "sonner";
+import { useSaveAnnotations } from "@/hooks/useSaveAnnotations";
 
 interface ToolItem {
   id: Tool;
@@ -97,8 +97,8 @@ export default function AnnotationControls() {
     undo,
     redo,
   } = useAnnotationStore();
-  const navigate = useNavigate();
   const { isCrowded, setIsCrowded } = useAnnotationStore();
+  const { saveAnnotations } = useSaveAnnotations();
 
   const tools: ToolItem[] = [
     { id: "polygon", icon: Waypoints, label: "Polygon" },
@@ -136,12 +136,7 @@ export default function AnnotationControls() {
         <Button variant="ghost" onClick={() => setCollapsed(!collapsed)}>
           {collapsed ? <ArrowRightToLine /> : <ArrowLeftToLine />}
         </Button>
-        <Button
-          onClick={() => {
-            navigate("/");
-          }}
-          variant="ghost"
-        >
+        <Button onClick={() => saveAnnotations()} variant="ghost">
           <Save size={16} />
         </Button>
       </div>
