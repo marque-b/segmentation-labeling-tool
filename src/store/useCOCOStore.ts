@@ -218,21 +218,22 @@ export const useCOCOStore = create<COCOState>()((set, get) => ({
       ),
     })),
 
-  updateDatasetCategories: (datasetId: string, categories: Category[]) =>
+  updateDatasetCategories: (datasetId: string, newCategories: Category[]) =>
     set((state) => ({
-      datasets: state.datasets.map((dataset) =>
-        dataset.id === datasetId
-          ? {
-              ...dataset,
-              categories: categories.map((cat) => ({
-                id: cat.id,
-                name: cat.name,
-                supercategory: cat.supercategory,
-                color: cat.color ?? "#000000",
-              })),
-            }
-          : dataset
-      ),
+      datasets: state.datasets.map((dataset) => {
+        if (dataset.id !== datasetId) return dataset;
+        const mergedCategories = [
+          ...dataset.categories,
+          ...newCategories.filter(
+            (newCat) =>
+              !dataset.categories.some((savedCat) => savedCat.id === newCat.id)
+          ),
+        ];
+        return {
+          ...dataset,
+          categories: mergedCategories,
+        };
+      }),
     })),
 
   exportDatasetToJson: (datasetId: string) => {
