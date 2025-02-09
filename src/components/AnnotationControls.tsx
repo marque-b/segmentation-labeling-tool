@@ -14,7 +14,7 @@ import {
   User,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tool, useAnnotationStore } from "@/store/useAnnotationStore";
 import DialogAddClass from "./DialogAddClass";
@@ -29,6 +29,7 @@ import {
 } from "./ui/dialog";
 import { toast } from "sonner";
 import { useSaveAnnotations } from "@/hooks/useSaveAnnotations";
+import { useCOCOStore } from "@/store/useCOCOStore";
 
 interface ToolItem {
   id: Tool;
@@ -96,9 +97,12 @@ export default function AnnotationControls() {
     setBrushSize,
     undo,
     redo,
+    selectedImageId,
+    setClasses,
   } = useAnnotationStore();
   const { isCrowded, setIsCrowded } = useAnnotationStore();
   const { saveAnnotations } = useSaveAnnotations();
+  const { datasets } = useCOCOStore();
 
   const tools: ToolItem[] = [
     { id: "polygon", icon: Waypoints, label: "Polygon" },
@@ -121,6 +125,18 @@ export default function AnnotationControls() {
     0: "Not Crowded",
     1: "Crowded",
   };
+
+  useEffect(() => {
+    if (!selectedImageId) return;
+
+    const dataset = datasets.find((d) =>
+      d.images.some((img) => img.id === selectedImageId)
+    );
+
+    if (!dataset) return;
+
+    setClasses(dataset.categories);
+  }, [selectedImageId, datasets, setClasses]);
 
   return (
     <div
@@ -159,10 +175,15 @@ export default function AnnotationControls() {
               variant="ghost"
               className={`flex justify-start items-center transition-colors duration-200
               ${selectedClassId === cls.id ? "bg-opacity-40 bg-gray-500" : ""}
-              `}
+            `}
               onClick={() => {
+                const isDeselecting = selectedClassId === cls.id;
                 selectClass(cls.id);
-                toast(`Categorie: ${classNames[cls.id]}`);
+                toast(
+                  isDeselecting
+                    ? "No category selected"
+                    : `Category: ${classNames[cls.id]}`
+                );
               }}
               onTouchStart={() => selectClass(cls.id)}
             >

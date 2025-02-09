@@ -91,6 +91,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   selectClass: (id: number | null) =>
     set((state) => ({
       selectedClassId: state.selectedClassId === id ? null : id,
+      activeTool: state.selectedClassId === id ? "none" : state.activeTool,
     })),
 
   setBrushSize: (size) => set({ brushSize: size }),
@@ -263,22 +264,22 @@ export function encodeRLE(binaryMask: Uint8Array): number[] {
   return rle;
 }
 
-function mergeRLE(
-  rle1: number[],
-  rle2: number[],
-  width: number,
-  height: number
-): number[] {
-  const mask1 = decodeRLE(rle1, width, height);
-  const mask2 = decodeRLE(rle2, width, height);
-  const mergedMask = new Uint8Array(width * height);
+// function mergeRLE(
+//   rle1: number[],
+//   rle2: number[],
+//   width: number,
+//   height: number
+// ): number[] {
+//   const mask1 = decodeRLE(rle1, width, height);
+//   const mask2 = decodeRLE(rle2, width, height);
+//   const mergedMask = new Uint8Array(width * height);
 
-  for (let i = 0; i < mergedMask.length; i++) {
-    mergedMask[i] = mask1[i] | mask2[i];
-  }
+//   for (let i = 0; i < mergedMask.length; i++) {
+//     mergedMask[i] = mask1[i] | mask2[i];
+//   }
 
-  return encodeRLE(mergedMask);
-}
+//   return encodeRLE(mergedMask);
+// }
 
 function calculateArea(points: { x: number; y: number }[]): number {
   let area = 0;
