@@ -35,7 +35,9 @@ export interface ImageFile {
   previewUrl: string;
 }
 
-type Segmentation = number[][] | { counts: number[]; size: [number, number] };
+export type Segmentation =
+  | number[][]
+  | { counts: number[]; size: [number, number] };
 
 export interface Annotation {
   id: number;

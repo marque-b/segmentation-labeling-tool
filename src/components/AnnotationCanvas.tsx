@@ -10,6 +10,7 @@ import DialogSaveAnnotations from "./DialogSaveAnnotations";
 import { useCOCOStore } from "@/store/useCOCOStore";
 import { useBlocker, useNavigate } from "react-router-dom";
 import { useSaveAnnotations } from "@/hooks/useSaveAnnotations";
+import { useFixedAnnotations } from "@/hooks/useFixedAnnotations";
 
 interface AnnotationCanvasProps {
   imageData: ImageData;
@@ -27,23 +28,33 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
     setAnnotations,
     setSelectedImageId,
     setActiveTool,
-    setClasses,
     setHistory,
     classes,
+    selectedClassId,
+    selectClass,
+    isCrowded,
+    setIsCrowded,
   } = useAnnotationStore();
 
   const navigate = useNavigate();
   const blocker = useBlocker(() => annotations.length > 0);
   const { saveAnnotations } = useSaveAnnotations();
 
+  const [pendingTool, setPendingTool] = useState<
+    "polygon" | "brush" | "eraser" | "none" | null
+  >(null);
+  const [pendingClass, setPendingClass] = useState<number | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [nextLocation, setNextLocation] = useState<string | null>(null);
+  const [pendingCrowded, setPendingCrowded] = useState<0 | 1 | null>(null);
+
+  const prevToolRef = useRef(activeTool);
+  const prevClassRef = useRef(selectedClassId);
+  const prevCrowdedRef = useRef(isCrowded);
 
   const clearStage = () => {
     setAnnotations([]);
-    setSelectedImageId(null);
     setActiveTool("none");
-    setClasses([]);
     setHistory([]);
 
     if (fabricRef.current) {
@@ -54,10 +65,25 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
 
   const handleSaveAnnotations = () => {
     saveAnnotations();
-
     clearStage();
-
     setShowDialog(false);
+
+    if (pendingTool !== null) {
+      setActiveTool(pendingTool);
+      prevToolRef.current = pendingTool;
+      setPendingTool(null);
+    }
+    if (pendingClass !== null) {
+      selectClass(pendingClass);
+      prevClassRef.current = pendingClass;
+      setPendingClass(null);
+    }
+
+    if (pendingCrowded !== null) {
+      setIsCrowded(pendingCrowded);
+      prevCrowdedRef.current = pendingCrowded;
+      setPendingCrowded(null);
+    }
 
     if (blocker.state === "blocked" && blocker.proceed) {
       blocker.proceed();
@@ -70,6 +96,23 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
     clearStage();
     setShowDialog(false);
 
+    if (pendingTool !== null) {
+      setActiveTool(pendingTool);
+      prevToolRef.current = pendingTool;
+      setPendingTool(null);
+    }
+    if (pendingClass !== null) {
+      selectClass(pendingClass);
+      prevClassRef.current = pendingClass;
+      setPendingClass(null);
+    }
+
+    if (pendingCrowded !== null) {
+      setIsCrowded(pendingCrowded);
+      prevCrowdedRef.current = pendingCrowded;
+      setPendingCrowded(null);
+    }
+
     if (blocker.state === "blocked" && blocker.proceed) {
       blocker.proceed();
     } else {
@@ -79,6 +122,7 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
 
   const hasUnsavedChanges = () => {
     if (!selectedImageId) return false;
+    if (annotations.length === 0) return false;
 
     const dataset = datasets.find((d) =>
       d.images.some((img) => img.id === selectedImageId)
@@ -106,6 +150,51 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
 
     return annotationsChanged || categoriesChanged;
   };
+
+  useEffect(() => {
+    setActiveTool("none");
+    prevToolRef.current = "none";
+  }, [selectedImageId]);
+
+  useEffect(() => {
+    if (activeTool !== prevToolRef.current) {
+      if (
+        annotations.length > 0 &&
+        prevToolRef.current !== "none" &&
+        hasUnsavedChanges()
+      ) {
+        setPendingTool(activeTool);
+        setActiveTool(prevToolRef.current);
+        setShowDialog(true);
+      } else {
+        prevToolRef.current = activeTool;
+      }
+    }
+  }, [activeTool]);
+
+  useEffect(() => {
+    if (selectedClassId !== prevClassRef.current) {
+      if (prevClassRef.current !== null && hasUnsavedChanges()) {
+        setPendingClass(selectedClassId);
+        selectClass(prevClassRef.current);
+        setShowDialog(true);
+      } else {
+        prevClassRef.current = selectedClassId;
+      }
+    }
+  }, [selectedClassId]);
+
+  useEffect(() => {
+    if (isCrowded !== prevCrowdedRef.current) {
+      if (prevCrowdedRef.current !== null && hasUnsavedChanges()) {
+        setPendingCrowded(isCrowded);
+        setIsCrowded(prevCrowdedRef.current);
+        setShowDialog(true);
+      } else {
+        prevCrowdedRef.current = isCrowded;
+      }
+    }
+  }, [isCrowded]);
 
   useEffect(() => {
     if (blocker.state === "blocked") {
@@ -167,6 +256,13 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
     };
   }, [imageData]);
 
+  useEffect(() => {
+    return () => {
+      setSelectedImageId(null);
+    };
+  }, []);
+
+  useFixedAnnotations(fabricRef.current, selectedImageId);
   usePolygonTool(fabricRef.current, activeTool === "polygon");
   useBrushTool(fabricRef.current, activeTool === "brush");
   // useEraserTool(fabricRef.current, activeTool === "eraser");

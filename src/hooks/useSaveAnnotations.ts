@@ -5,7 +5,8 @@ import { toast } from "sonner";
 export function useSaveAnnotations() {
   const { datasets, updateDatasetAnnotations, updateDatasetCategories } =
     useCOCOStore();
-  const { selectedImageId, annotations, classes } = useAnnotationStore();
+  const { selectedImageId, annotations, classes, setAnnotations, setHistory } =
+    useAnnotationStore();
 
   const saveAnnotations = () => {
     if (!selectedImageId) return;
@@ -85,6 +86,8 @@ export function useSaveAnnotations() {
       toast("No changes to save.");
     } else {
       toast("Annotations saved!");
+      setAnnotations([]);
+      setHistory([]);
     }
   };
 

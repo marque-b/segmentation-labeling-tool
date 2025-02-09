@@ -162,8 +162,8 @@ export default function AnnotationControls() {
           !collapsed ? "items-end" : "items-center"
         } mb-2 space-y-2`}
       >
-        {classes.map((cls) => (
-          <div className="relative" key={cls.id}>
+        {classes.map((cls, key) => (
+          <div className="relative" key={cls.id + key}>
             {!collapsed && (
               <DeleteClass
                 classId={cls.id}

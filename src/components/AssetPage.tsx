@@ -11,6 +11,7 @@ import { useAnnotationStore } from "@/store/useAnnotationStore";
 import DialogAddImage from "./DialogAddImage";
 import ImageCard from "./ImageCard";
 import { Button } from "./ui/button";
+import { useEffect } from "react";
 
 export default function AssetPage() {
   const { id } = useParams();
@@ -18,6 +19,7 @@ export default function AssetPage() {
   const dataset = useCOCOStore((state) =>
     state.datasets.find((d) => d.id === id)
   );
+  const { setClasses } = useAnnotationStore();
 
   const {
     imageFiles,
@@ -25,6 +27,12 @@ export default function AssetPage() {
     updateImageLicense,
     exportDatasetToJson,
   } = useCOCOStore();
+
+  useEffect(() => {
+    if (dataset) {
+      setClasses(dataset.categories);
+    }
+  }, [dataset, setClasses]);
 
   if (!dataset) return <div className="container">Dataset not found</div>;
 

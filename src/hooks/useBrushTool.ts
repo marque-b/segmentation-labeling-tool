@@ -16,7 +16,7 @@ export function useBrushTool(canvas: Canvas | null, active: boolean) {
 
   useEffect(() => {
     if (!canvas) return;
-    if (active) {
+    if (active && selectedClassId !== null) {
       if (!(canvas.freeDrawingBrush instanceof PencilBrush)) {
         canvas.freeDrawingBrush = new PencilBrush(canvas);
       }
@@ -26,7 +26,7 @@ export function useBrushTool(canvas: Canvas | null, active: boolean) {
     } else {
       canvas.isDrawingMode = false;
     }
-  }, [canvas, active, brushSize, brushColor]);
+  }, [canvas, active, brushSize, brushColor, selectedClassId]);
 
   useEffect(() => {
     if (!canvas || !active || selectedImageId === null) return;

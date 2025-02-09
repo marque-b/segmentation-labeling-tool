@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { Canvas } from "fabric";
-import { Annotation } from "./useCOCOStore";
+import { Annotation, useCOCOStore } from "./useCOCOStore";
 
 export type Tool = "polygon" | "brush" | "eraser" | "none";
 export type PositionMode = "precision" | "direct";
@@ -105,7 +105,15 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   setHistory: (history) => set({ history, currentHistoryIndex: -1 }),
 
   setClasses: (classes) =>
-    set({ classes, classIdCounter: 1, selectedClassId: null }),
+    set((state) => {
+      const maxId =
+        classes.length > 0 ? Math.max(...classes.map((cls) => cls.id)) : 0;
+      return {
+        classes,
+        selectedClassId: state.selectedClassId,
+        classIdCounter: Math.max(state.classIdCounter, maxId + 1),
+      };
+    }),
 
   saveHistory: () => {
     const { canvas } = get();
@@ -182,20 +190,76 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       get();
     if (!selectedClassId) return;
 
-    const newAnnotation: Annotation = {
-      id: annotationIdCounter,
-      classId: selectedClassId,
-      imageId,
-      segmentation: { counts: rle, size: [height, width] as [number, number] },
-      area: width * height,
-      iscrowd: isCrowded,
-      bbox: [0, 0, width, height],
-    };
+    // Obtém o dataset atual do COCOStore para verificar as anotações já salvas
+    const { datasets } = useCOCOStore.getState();
+    const dataset = datasets.find((d) =>
+      d.images.some((img) => img.id === imageId)
+    );
 
-    set({
-      annotations: [...annotations, newAnnotation],
-      annotationIdCounter: annotationIdCounter + 1,
+    // Procura uma anotação existente no stage para merge, mas somente se NÃO estiver salva
+    const existingIndex = annotations.findIndex((ann) => {
+      if (
+        ann.classId === selectedClassId &&
+        ann.imageId === imageId &&
+        ann.segmentation &&
+        typeof ann.segmentation === "object" &&
+        !Array.isArray(ann.segmentation)
+      ) {
+        // Se o dataset existir e essa anotação já estiver salva no dataset, não mescla
+        if (
+          dataset &&
+          dataset.annotations.some((savedAnn) => savedAnn.id === ann.id)
+        ) {
+          return false;
+        }
+        return true;
+      }
+      return false;
     });
+
+    if (existingIndex !== -1) {
+      // Merge somente com anotações que estão apenas no stage (temporárias)
+      const existingAnnotation = annotations[existingIndex];
+      const existingSeg = existingAnnotation.segmentation as {
+        counts: number[];
+        size: [number, number];
+      };
+
+      const mergedRLE = mergeRLE(existingSeg.counts, rle, width, height);
+      const mergedMask = decodeRLE(mergedRLE, width, height);
+      const newArea = mergedMask.reduce((sum, val) => sum + val, 0);
+      const newBbox = calculateMaskBBox(mergedMask, width, height);
+
+      const updatedAnnotation: Annotation = {
+        ...existingAnnotation,
+        segmentation: { counts: mergedRLE, size: [height, width] },
+        area: newArea,
+        bbox: newBbox,
+      };
+
+      const newAnnotations = [...annotations];
+      newAnnotations[existingIndex] = updatedAnnotation;
+      set({ annotations: newAnnotations });
+    } else {
+      const mask = decodeRLE(rle, width, height);
+      const area = mask.reduce((sum, val) => sum + val, 0);
+      const bbox = calculateMaskBBox(mask, width, height);
+
+      const newAnnotation: Annotation = {
+        id: annotationIdCounter,
+        classId: selectedClassId,
+        imageId,
+        segmentation: { counts: rle, size: [height, width] },
+        area,
+        iscrowd: isCrowded,
+        bbox,
+      };
+
+      set({
+        annotations: [...annotations, newAnnotation],
+        annotationIdCounter: annotationIdCounter + 1,
+      });
+    }
   },
 
   savePolygon: (points) => {
@@ -232,19 +296,15 @@ export function decodeRLE(
 ): Uint8Array {
   const binaryMask = new Uint8Array(width * height);
   let index = 0;
-
   for (let i = 0; i < rle.length; i++) {
     const value = i % 2 === 0 ? 0 : 1;
     const count = rle[i];
-
     for (let j = 0; j < count; j++) {
       binaryMask[index++] = value;
     }
   }
-
   return binaryMask;
 }
-
 export function encodeRLE(binaryMask: Uint8Array): number[] {
   const rle: number[] = [];
   let count = 0;
@@ -264,22 +324,43 @@ export function encodeRLE(binaryMask: Uint8Array): number[] {
   return rle;
 }
 
-// function mergeRLE(
-//   rle1: number[],
-//   rle2: number[],
-//   width: number,
-//   height: number
-// ): number[] {
-//   const mask1 = decodeRLE(rle1, width, height);
-//   const mask2 = decodeRLE(rle2, width, height);
-//   const mergedMask = new Uint8Array(width * height);
+function mergeRLE(
+  rle1: number[],
+  rle2: number[],
+  width: number,
+  height: number
+): number[] {
+  const mask1 = decodeRLE(rle1, width, height);
+  const mask2 = decodeRLE(rle2, width, height);
+  const mergedMask = new Uint8Array(width * height);
+  for (let i = 0; i < mergedMask.length; i++) {
+    mergedMask[i] = mask1[i] || mask2[i] ? 1 : 0;
+  }
+  return encodeRLE(mergedMask);
+}
 
-//   for (let i = 0; i < mergedMask.length; i++) {
-//     mergedMask[i] = mask1[i] | mask2[i];
-//   }
-
-//   return encodeRLE(mergedMask);
-// }
+function calculateMaskBBox(
+  binaryMask: Uint8Array,
+  width: number,
+  height: number
+): [number, number, number, number] {
+  let minX = width,
+    minY = height,
+    maxX = 0,
+    maxY = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (binaryMask[y * width + x] === 1) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (minX === width || minY === height) return [0, 0, 0, 0];
+  return [minX, minY, maxX - minX, maxY - minY];
+}
 
 function calculateArea(points: { x: number; y: number }[]): number {
   let area = 0;
