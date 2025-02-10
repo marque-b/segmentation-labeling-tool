@@ -47,22 +47,13 @@ export function useSaveAnnotations() {
     );
 
     if (newOrUpdatedAnnotations.length > 0) {
-      const image = dataset.images.find((img) => img.id === selectedImageId);
-
       const formattedAnnotations = newOrUpdatedAnnotations.map((ann) => ({
         imageId: selectedImageId,
         id: ann.id,
         classId: ann.classId,
-        segmentation:
-          ann.segmentation && Array.isArray(ann.segmentation)
-            ? {
-                counts: ann.segmentation.flat(),
-                size:
-                  image && image.width && image.height
-                    ? ([image.width, image.height] as [number, number])
-                    : ([0, 0] as [number, number]),
-              }
-            : ann.segmentation ?? null,
+        segmentation: Array.isArray(ann.segmentation)
+          ? ann.segmentation
+          : ann.segmentation ?? null,
         area: ann.area,
         iscrowd: ann.iscrowd,
         bbox: ann.bbox,

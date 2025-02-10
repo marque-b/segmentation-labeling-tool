@@ -1,7 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Canvas, PencilBrush } from "fabric";
 import { useAnnotationStore } from "@/store/useAnnotationStore";
-import { useCOCOStore } from "@/store/useCOCOStore";
 
 export function useBrushTool(canvas: Canvas | null, active: boolean) {
   const {
@@ -14,7 +13,6 @@ export function useBrushTool(canvas: Canvas | null, active: boolean) {
   } = useAnnotationStore();
   const activeClass = classes.find((cls) => cls.id === selectedClassId);
   const brushColor = activeClass ? activeClass.color : "#000000";
-  const debounceRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!canvas) return;
@@ -34,49 +32,19 @@ export function useBrushTool(canvas: Canvas | null, active: boolean) {
     if (!canvas || !active || selectedImageId === null) return;
 
     const handlePathCreated = async () => {
-      console.log("[useBrushTool] --- Stroke created ---");
-      console.log(
-        "[useBrushTool] Stage annotations BEFORE saveHistory:",
-        useAnnotationStore.getState().annotations
+      saveHistory();
+      const rleMask = await generateRLE(canvas);
+      saveBrushMaskToStage(
+        rleMask,
+        canvas.width!,
+        canvas.height!,
+        selectedImageId
       );
-      console.log(
-        "[useBrushTool] Dataset annotations BEFORE saveHistory:",
-        useCOCOStore.getState().datasets.map((d) => d.annotations)
-      );
-
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-      debounceRef.current = window.setTimeout(async () => {
-        console.log(
-          "[useBrushTool] Debounce timeout reached, processing stroke"
-        );
-        saveHistory();
-        const rleMask = await generateRLE(canvas);
-        console.log("[useBrushTool] RLE mask generated:", rleMask);
-        saveBrushMaskToStage(
-          rleMask,
-          canvas.width!,
-          canvas.height!,
-          selectedImageId
-        );
-        console.log(
-          "[useBrushTool] Stage annotations AFTER saveBrushMaskToStage:",
-          useAnnotationStore.getState().annotations
-        );
-        console.log(
-          "[useBrushTool] Dataset annotations AFTER saveBrushMaskToStage:",
-          useCOCOStore.getState().datasets.map((d) => d.annotations)
-        );
-        console.log("[useBrushTool] --- End stroke processing ---");
-        debounceRef.current = null;
-      }, 50);
     };
 
     canvas.on("path:created", handlePathCreated);
     return () => {
       canvas.off("path:created", handlePathCreated);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [canvas, active, saveHistory, saveBrushMaskToStage, selectedImageId]);
 }

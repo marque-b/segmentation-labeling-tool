@@ -252,22 +252,6 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
     fabricRef.current = canvas;
     setCanvas(canvas);
 
-    // const lockAllObjects = () => {
-    //   canvas.getObjects().forEach((obj) => {
-    //     obj.set({
-    //       selectable: false,
-    //       evented: false,
-    //       lockMovementX: true,
-    //       lockMovementY: true,
-    //       hasControls: true,
-    //       hoverCursor: "default",
-    //     });
-    //   });
-    //   canvas.renderAll();
-    // };
-    // lockAllObjects();
-    // canvas.on("object:added", () => lockAllObjects());
-
     return () => {
       if (annotations.length > 0) {
         setShowDialog(true);
@@ -320,7 +304,6 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
   usePolygonTool(fabricRef.current, activeTool === "polygon");
   useBrushTool(fabricRef.current, activeTool === "brush");
   // useEraserTool(fabricRef.current, activeTool === "eraser");
-  // useRenderMask(fabricRef.current);
 
   return (
     <>

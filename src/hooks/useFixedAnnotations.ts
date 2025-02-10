@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Canvas, Rect, Control, FabricImage } from "fabric";
+import { Canvas, Control, FabricImage, Polygon, Rect } from "fabric";
 import { useCOCOStore } from "@/store/useCOCOStore";
 import { useAnnotationStore } from "@/store/useAnnotationStore";
 import { createMaskCanvas } from "@/utils/maskUtils";
@@ -17,41 +17,6 @@ function cropMaskCanvas(
     ctx.drawImage(sourceCanvas, x, y, width, height, 0, 0, width, height);
   }
   return cropped;
-}
-
-const circleXSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-x"><circle cx="12" cy="12" r="10"/><path d="M15 9L9 15"/><path d="M9 9l6 6"/></svg>`;
-let deleteIconImg: HTMLImageElement | null = null;
-
-function getDeleteIconImg(callback: (img: HTMLImageElement) => void): void {
-  if (deleteIconImg) {
-    callback(deleteIconImg);
-    return;
-  }
-  const svgBlob = new Blob([circleXSVG], {
-    type: "image/svg+xml;charset=utf-8",
-  });
-  const url = URL.createObjectURL(svgBlob);
-  const img = new Image();
-  img.onload = () => {
-    deleteIconImg = img;
-    URL.revokeObjectURL(url);
-    callback(img);
-  };
-  img.src = url;
-}
-
-function renderDeleteIcon(
-  ctx: CanvasRenderingContext2D,
-  left: number,
-  top: number
-): void {
-  getDeleteIconImg((img) => {
-    const iconSize = 24;
-    ctx.save();
-    ctx.translate(left, top);
-    ctx.drawImage(img, -iconSize / 2, -iconSize / 2, iconSize, iconSize);
-    ctx.restore();
-  });
 }
 
 function deleteObject(_eventData: unknown, transform: any): boolean {
@@ -81,6 +46,7 @@ export function useFixedAnnotations(
   const allowAnnotationDelete = useAnnotationStore(
     (state) => state.allowAnnotationDelete
   );
+
   useEffect(() => {
     if (!canvas || !selectedImageId) return;
     canvas.clear();
@@ -96,7 +62,12 @@ export function useFixedAnnotations(
         (cat: any) => cat.id === ann.classId
       );
       const strokeColor = category ? `${category.color}60` : "red";
-      if (ann.segmentation && ann.segmentation.counts) {
+      // Caso seja uma máscara (RLE)
+      if (
+        ann.segmentation &&
+        !Array.isArray(ann.segmentation) &&
+        ann.segmentation.counts
+      ) {
         const fullMaskCanvas = createMaskCanvas(ann.segmentation, strokeColor);
         const croppedCanvas = cropMaskCanvas(fullMaskCanvas, ann.bbox);
         const maskImage = new FabricImage(croppedCanvas, {
@@ -140,50 +111,69 @@ export function useFixedAnnotations(
             cursorStyle: "pointer",
             actionName: "delete",
             actionHandler: (eventData, transform) => {
-              console.log("Delete control clicked", eventData, transform);
               deleteObject(eventData, transform);
               return true;
             },
-            sizeX: 24,
-            sizeY: 24,
-            touchSizeX: 24,
-            touchSizeY: 24,
           });
         }
         canvas.add(maskImage);
-      } else {
-        const [x, y, w, h] = ann.bbox;
-        const rect = new Rect({
-          left: x,
-          top: y,
-          width: w,
-          height: h,
-          fill: "transparent",
+      }
+      // Caso seja uma anotação poligonal (array de pontos)
+      else if (ann.segmentation && Array.isArray(ann.segmentation)) {
+        const coords: number[] = ann.segmentation[0];
+        const points: { x: number; y: number }[] = [];
+        for (let i = 0; i < coords.length; i += 2) {
+          points.push({ x: coords[i], y: coords[i + 1] });
+        }
+        const polygon = new Polygon(points, {
+          fill: `${strokeColor.replace("60", "80")}`,
           stroke: strokeColor,
           strokeWidth: 2,
           selectable: allowAnnotationDelete,
           evented: allowAnnotationDelete,
-        }) as Rect & {
+          hasBorders: false,
+          lockMovementX: true,
+          lockMovementY: true,
+        }) as Polygon & {
           fixedAnnotation?: boolean;
           annotationId?: number;
           datasetId?: string;
           imageId?: number;
         };
-        rect.fixedAnnotation = true;
-        rect.annotationId = ann.id;
-        rect.datasetId = dataset.id;
-        rect.imageId = ann.imageId;
+        polygon.fixedAnnotation = true;
+        polygon.annotationId = ann.id;
+        polygon.datasetId = dataset.id;
+        polygon.imageId = ann.imageId;
         if (allowAnnotationDelete) {
-          rect.controls.deleteControl = new Control({
+          polygon.controls.deleteControl = new Control({
             x: 0.5,
             y: -0.5,
             offsetY: -16,
             cursorStyle: "pointer",
-            mouseUpHandler: deleteObject,
-            render: renderDeleteIcon,
+            actionName: "delete",
+            actionHandler: (eventData, transform) => {
+              deleteObject(eventData, transform);
+              return true;
+            },
           });
         }
-        canvas.add(rect);
+        canvas.add(polygon);
+        // Adiciona um retângulo para exibir o bbox do polígono
+        const [bboxX, bboxY, bboxW, bboxH] = ann.bbox;
+        const bboxRect = new Rect({
+          left: bboxX,
+          top: bboxY,
+          width: bboxW,
+          height: bboxH,
+          fill: "transparent",
+          stroke: strokeColor,
+          strokeWidth: 2,
+          // strokeDashArray: [5, 5],
+          selectable: false,
+          evented: false,
+          hasBorders: false,
+        });
+        canvas.add(bboxRect);
       }
     });
     canvas.renderAll();

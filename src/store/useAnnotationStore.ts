@@ -46,7 +46,7 @@ interface AnnotationState {
     height: number,
     imageId: number
   ) => void;
-  savePolygon: (points: { x: number; y: number }[]) => void;
+  savePolygonToDataset: (points: { x: number; y: number }[]) => void;
   setIsCrowded: (value: 0 | 1) => void;
   setAnnotations: (annotations: Annotation[]) => void;
   setHistory: (history: HistoryState[]) => void;
@@ -289,14 +289,9 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     );
   },
 
-  savePolygon: (points) => {
-    const {
-      selectedClassId,
-      selectedImageId,
-      annotationIdCounter,
-      annotations,
-      isCrowded,
-    } = get();
+  savePolygonToDataset: (points: { x: number; y: number }[]) => {
+    const { selectedClassId, selectedImageId, annotationIdCounter, isCrowded } =
+      get();
     if (!selectedClassId || !selectedImageId) return;
 
     const newAnnotation: Annotation = {
@@ -308,11 +303,19 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       iscrowd: isCrowded,
       bbox: calculateBoundingBox(points),
     };
+    const { datasets, updateDatasetAnnotations } = useCOCOStore.getState();
+    const dataset = datasets.find((d: any) =>
+      d.images.some((img: any) => img.id === selectedImageId)
+    );
+    if (!dataset) return;
 
-    set({
-      annotations: [...annotations, newAnnotation],
-      annotationIdCounter: annotationIdCounter + 1,
-    });
+    const updatedDatasetAnnotations = [...dataset.annotations, newAnnotation];
+    updateDatasetAnnotations(
+      dataset.id,
+      selectedImageId,
+      updatedDatasetAnnotations
+    );
+    set({ annotationIdCounter: annotationIdCounter + 1 });
   },
 
   setAllowAnnotationDelete: () =>

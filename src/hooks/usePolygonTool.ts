@@ -13,7 +13,7 @@ export function usePolygonTool(canvas: Canvas | null, active: boolean) {
     []
   );
   const tempPolygonRef = useRef<Polygon | null>(null);
-  const { selectedClassId, classes, saveHistory, savePolygon } =
+  const { selectedClassId, classes, saveHistory, savePolygonToDataset } =
     useAnnotationStore();
   const activeClass = classes.find((cls) => cls.id === selectedClassId);
   const polygonColor = activeClass ? activeClass.color : "#00ff00";
@@ -59,16 +59,27 @@ export function usePolygonTool(canvas: Canvas | null, active: boolean) {
       canvas.remove(tempPolygonRef.current);
       tempPolygonRef.current = null;
     }
-    if (points.length === 0) return;
-    if (points.length > 2) {
-      savePolygon(points);
+    if (points.length < 3) return;
+    const first = points[0];
+    const last = points[points.length - 1];
+    const distance = Math.sqrt(
+      (first.x - last.x) ** 2 + (first.y - last.y) ** 2
+    );
+    if (distance < 10) {
+      console.log(
+        "[usePolygonTool] Último ponto está próximo do primeiro; sobrescrevendo último ponto."
+      );
+      points[points.length - 1] = { ...first };
     }
+
+    savePolygonToDataset(points);
     const finalPolygon = new Polygon(points, {
-      fill: `${polygonColor}80`,
+      fill: `${polygonColor}60`,
       stroke: polygonColor,
       strokeWidth: 2,
       selectable: false,
       hasControls: false,
+      closed: true,
       data: { classId: selectedClassId, type: "polygon" },
     } as any);
     canvas.add(finalPolygon);
