@@ -91,11 +91,25 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         state.selectedClassId === id ? null : state.selectedClassId,
     })),
 
-  selectClass: (id: number | null) =>
-    set((state) => ({
-      selectedClassId: state.selectedClassId === id ? null : id,
-      activeTool: state.selectedClassId === id ? "none" : state.activeTool,
-    })),
+  selectClass: (id: number | null) => {
+    console.log(
+      "[selectClass] previous selectedClassId:",
+      get().selectedClassId,
+      "new id:",
+      id
+    );
+    set((state) => {
+      const newSelectedId = state.selectedClassId === id ? null : id;
+      console.log("[selectClass] new selectedClassId:", newSelectedId);
+      const newActiveTool =
+        state.selectedClassId === id ? "none" : state.activeTool;
+      console.log("[selectClass] new activeTool:", newActiveTool);
+      return {
+        selectedClassId: newSelectedId,
+        activeTool: newActiveTool,
+      };
+    });
+  },
 
   setBrushSize: (size) => set({ brushSize: size }),
 
@@ -191,15 +205,19 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   saveMask: (rle: number[], width: number, height: number, imageId: number) => {
     const { selectedClassId, annotationIdCounter, annotations, isCrowded } =
       get();
+    console.log("[saveMask] selectedClassId:", selectedClassId);
+    console.log("[saveMask] current annotations in stage:", annotations);
     if (!selectedClassId) return;
 
-    // Obtém o dataset atual do COCOStore para verificar as anotações já salvas
     const { datasets } = useCOCOStore.getState();
     const dataset = datasets.find((d) =>
       d.images.some((img) => img.id === imageId)
     );
+    console.log(
+      "[saveMask] dataset.annotations:",
+      dataset ? dataset.annotations : "none"
+    );
 
-    // Procura uma anotação existente no stage para merge, mas somente se NÃO estiver salva
     const existingIndex = annotations.findIndex((ann) => {
       if (
         ann.classId === selectedClassId &&
@@ -208,46 +226,50 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         typeof ann.segmentation === "object" &&
         !Array.isArray(ann.segmentation)
       ) {
-        // Se o dataset existir e essa anotação já estiver salva no dataset, não mescla
-        if (
-          dataset &&
-          dataset.annotations.some((savedAnn) => savedAnn.id === ann.id)
-        ) {
-          return false;
-        }
+        const existsInDataset = dataset
+          ? dataset.annotations.some((savedAnn) => savedAnn.id === ann.id)
+          : false;
+        console.log(
+          `[saveMask] Checking annotation id ${ann.id}: existsInDataset=${existsInDataset}`
+        );
+        if (existsInDataset) return false;
         return true;
       }
       return false;
     });
 
     if (existingIndex !== -1) {
-      // Merge somente com anotações que estão apenas no stage (temporárias)
       const existingAnnotation = annotations[existingIndex];
+      console.log(
+        "[saveMask] Merging with existing annotation:",
+        existingAnnotation
+      );
       const existingSeg = existingAnnotation.segmentation as {
         counts: number[];
         size: [number, number];
       };
-
       const mergedRLE = mergeRLE(existingSeg.counts, rle, width, height);
+      console.log("[saveMask] mergedRLE:", mergedRLE);
       const mergedMask = decodeRLE(mergedRLE, width, height);
       const newArea = mergedMask.reduce((sum, val) => sum + val, 0);
       const newBbox = calculateMaskBBox(mergedMask, width, height);
-
       const updatedAnnotation: Annotation = {
         ...existingAnnotation,
         segmentation: { counts: mergedRLE, size: [height, width] },
         area: newArea,
         bbox: newBbox,
       };
-
       const newAnnotations = [...annotations];
       newAnnotations[existingIndex] = updatedAnnotation;
+      console.log(
+        "[saveMask] Updated annotations after merge:",
+        newAnnotations
+      );
       set({ annotations: newAnnotations });
     } else {
       const mask = decodeRLE(rle, width, height);
       const area = mask.reduce((sum, val) => sum + val, 0);
       const bbox = calculateMaskBBox(mask, width, height);
-
       const newAnnotation: Annotation = {
         id: annotationIdCounter,
         classId: selectedClassId,
@@ -257,7 +279,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         iscrowd: isCrowded,
         bbox,
       };
-
+      console.log("[saveMask] Creating new annotation:", newAnnotation);
       set({
         annotations: [...annotations, newAnnotation],
         annotationIdCounter: annotationIdCounter + 1,
