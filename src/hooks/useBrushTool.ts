@@ -53,10 +53,38 @@ async function generateRLE(canvas: Canvas): Promise<number[]> {
   const pixels = imageData.data;
   const binaryMask = new Uint8Array(width * height);
 
+  const activeClass = useAnnotationStore
+    .getState()
+    .classes.find(
+      (cls) => cls.id === useAnnotationStore.getState().selectedClassId
+    );
+
+  if (!activeClass) return [];
+
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+      ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        }
+      : null;
+  };
+
+  const targetColor = hexToRgb(activeClass.color);
+  if (!targetColor) return [];
+
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const index = (y * width + x) * 4;
-      binaryMask[y * width + x] = pixels[index + 3] > 0 ? 1 : 0;
+      const isMatchingColor =
+        Math.abs(pixels[index] - targetColor.r) < 5 &&
+        Math.abs(pixels[index + 1] - targetColor.g) < 5 &&
+        Math.abs(pixels[index + 2] - targetColor.b) < 5 &&
+        pixels[index + 3] > 0;
+
+      binaryMask[y * width + x] = isMatchingColor ? 1 : 0;
     }
   }
 

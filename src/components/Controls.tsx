@@ -13,7 +13,7 @@ function Controls() {
   return (
     <div className="container">
       <nav className="flex justify-end items-center min-h-14 gap-2">
-        <Button variant="outline" onClick={() => navigate("/test-rle")}>
+        <Button variant="outline" onClick={() => navigate("/test")}>
           Test
         </Button>
         <Button variant="outline" onClick={() => navigate(-1)}>

@@ -11,7 +11,6 @@ export function useFixedAnnotations(
   useEffect(() => {
     if (!canvas || !selectedImageId) return;
 
-    // Remove os objetos fixos existentes
     const fixedObjs = canvas
       .getObjects()
       .filter((obj: any) => obj.fixedAnnotation === true);
@@ -28,7 +27,6 @@ export function useFixedAnnotations(
 
     fixedAnnotations.forEach((ann) => {
       const [x, y, w, h] = ann.bbox;
-      // Procura a categoria correspondente à anotação e usa sua cor para o stroke
       const category = dataset.categories.find((cat) => cat.id === ann.classId);
       const strokeColor = category ? category.color : "red";
 
@@ -43,7 +41,6 @@ export function useFixedAnnotations(
         selectable: false,
         evented: false,
       });
-      // Marca o objeto como uma fixed annotation
       (rect as any).fixedAnnotation = true;
       canvas.add(rect);
     });
