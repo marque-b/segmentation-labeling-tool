@@ -117,9 +117,7 @@ export function useFixedAnnotations(
           });
         }
         canvas.add(maskImage);
-      }
-      // Caso seja uma anotação poligonal (array de pontos)
-      else if (ann.segmentation && Array.isArray(ann.segmentation)) {
+      } else if (ann.segmentation && Array.isArray(ann.segmentation)) {
         const coords: number[] = ann.segmentation[0];
         const points: { x: number; y: number }[] = [];
         for (let i = 0; i < coords.length; i += 2) {
@@ -158,7 +156,6 @@ export function useFixedAnnotations(
           });
         }
         canvas.add(polygon);
-        // Adiciona um retângulo para exibir o bbox do polígono
         const [bboxX, bboxY, bboxW, bboxH] = ann.bbox;
         const bboxRect = new Rect({
           left: bboxX,
@@ -168,7 +165,6 @@ export function useFixedAnnotations(
           fill: "transparent",
           stroke: strokeColor,
           strokeWidth: 2,
-          // strokeDashArray: [5, 5],
           selectable: false,
           evented: false,
           hasBorders: false,
