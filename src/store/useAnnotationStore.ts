@@ -40,7 +40,7 @@ interface AnnotationState {
   undo: () => void;
   redo: () => void;
   setCanvas: (canvas: Canvas) => void;
-  saveMask: (
+  saveBrushMaskToStage: (
     rle: number[],
     width: number,
     height: number,
@@ -202,46 +202,35 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
   setSelectedImageId: (id: number | null) => set({ selectedImageId: id }),
 
-  saveMask: (rle: number[], width: number, height: number, imageId: number) => {
+  saveBrushMaskToStage: (
+    rle: number[],
+    width: number,
+    height: number,
+    imageId: number
+  ) => {
     const { selectedClassId, annotationIdCounter, annotations, isCrowded } =
       get();
-    console.log("[saveMask] selectedClassId:", selectedClassId);
-    console.log("[saveMask] current annotations in stage:", annotations);
+    console.log("[saveBrushMaskToStage] selectedClassId:", selectedClassId);
+    console.log(
+      "[saveBrushMaskToStage] current stage annotations:",
+      annotations
+    );
     if (!selectedClassId) return;
 
-    const { datasets } = useCOCOStore.getState();
-    const dataset = datasets.find((d) =>
-      d.images.some((img) => img.id === imageId)
-    );
-    console.log(
-      "[saveMask] dataset.annotations:",
-      dataset ? dataset.annotations : "none"
-    );
-
     const existingIndex = annotations.findIndex((ann) => {
-      if (
+      return (
         ann.classId === selectedClassId &&
         ann.imageId === imageId &&
         ann.segmentation &&
         typeof ann.segmentation === "object" &&
         !Array.isArray(ann.segmentation)
-      ) {
-        const existsInDataset = dataset
-          ? dataset.annotations.some((savedAnn) => savedAnn.id === ann.id)
-          : false;
-        console.log(
-          `[saveMask] Checking annotation id ${ann.id}: existsInDataset=${existsInDataset}`
-        );
-        if (existsInDataset) return false;
-        return true;
-      }
-      return false;
+      );
     });
 
     if (existingIndex !== -1) {
       const existingAnnotation = annotations[existingIndex];
       console.log(
-        "[saveMask] Merging with existing annotation:",
+        "[saveBrushMaskToStage] Merging with existing annotation:",
         existingAnnotation
       );
       const existingSeg = existingAnnotation.segmentation as {
@@ -249,20 +238,23 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         size: [number, number];
       };
       const mergedRLE = mergeRLE(existingSeg.counts, rle, width, height);
-      console.log("[saveMask] mergedRLE:", mergedRLE);
+      console.log("[saveBrushMaskToStage] mergedRLE:", mergedRLE);
       const mergedMask = decodeRLE(mergedRLE, width, height);
       const newArea = mergedMask.reduce((sum, val) => sum + val, 0);
       const newBbox = calculateMaskBBox(mergedMask, width, height);
       const updatedAnnotation: Annotation = {
         ...existingAnnotation,
-        segmentation: { counts: mergedRLE, size: [height, width] },
+        segmentation: {
+          counts: mergedRLE,
+          size: [height, width] as [number, number],
+        },
         area: newArea,
         bbox: newBbox,
       };
       const newAnnotations = [...annotations];
       newAnnotations[existingIndex] = updatedAnnotation;
       console.log(
-        "[saveMask] Updated annotations after merge:",
+        "[saveBrushMaskToStage] Updated stage annotations after merge:",
         newAnnotations
       );
       set({ annotations: newAnnotations });
@@ -274,17 +266,27 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         id: annotationIdCounter,
         classId: selectedClassId,
         imageId,
-        segmentation: { counts: rle, size: [height, width] },
+        segmentation: {
+          counts: rle,
+          size: [height, width] as [number, number],
+        },
         area,
         iscrowd: isCrowded,
         bbox,
       };
-      console.log("[saveMask] Creating new annotation:", newAnnotation);
+      console.log(
+        "[saveBrushMaskToStage] Creating new annotation:",
+        newAnnotation
+      );
       set({
         annotations: [...annotations, newAnnotation],
         annotationIdCounter: annotationIdCounter + 1,
       });
     }
+    console.log(
+      "[saveBrushMaskToStage] Final stage annotations:",
+      get().annotations
+    );
   },
 
   savePolygon: (points) => {

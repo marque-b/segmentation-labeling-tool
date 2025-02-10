@@ -9,7 +9,7 @@ export function useBrushTool(canvas: Canvas | null, active: boolean) {
     selectedClassId,
     classes,
     saveHistory,
-    saveMask,
+    saveBrushMaskToStage,
     selectedImageId,
   } = useAnnotationStore();
   const activeClass = classes.find((cls) => cls.id === selectedClassId);
@@ -54,18 +54,23 @@ export function useBrushTool(canvas: Canvas | null, active: boolean) {
         saveHistory();
         const rleMask = await generateRLE(canvas);
         console.log("[useBrushTool] RLE mask generated:", rleMask);
-        saveMask(rleMask, canvas.width!, canvas.height!, selectedImageId);
+        saveBrushMaskToStage(
+          rleMask,
+          canvas.width!,
+          canvas.height!,
+          selectedImageId
+        );
         console.log(
-          "[useBrushTool] Stage annotations AFTER saveMask:",
+          "[useBrushTool] Stage annotations AFTER saveBrushMaskToStage:",
           useAnnotationStore.getState().annotations
         );
         console.log(
-          "[useBrushTool] Dataset annotations AFTER saveMask:",
+          "[useBrushTool] Dataset annotations AFTER saveBrushMaskToStage:",
           useCOCOStore.getState().datasets.map((d) => d.annotations)
         );
         console.log("[useBrushTool] --- End stroke processing ---");
         debounceRef.current = null;
-      }, 1000); // 1 second debounce
+      }, 50);
     };
 
     canvas.on("path:created", handlePathCreated);
@@ -73,7 +78,7 @@ export function useBrushTool(canvas: Canvas | null, active: boolean) {
       canvas.off("path:created", handlePathCreated);
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [canvas, active, saveHistory, saveMask, selectedImageId]);
+  }, [canvas, active, saveHistory, saveBrushMaskToStage, selectedImageId]);
 }
 
 async function generateRLE(canvas: Canvas): Promise<number[]> {
