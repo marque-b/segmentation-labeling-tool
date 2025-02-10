@@ -13,6 +13,7 @@ import {
   CircleX,
   User,
   Users,
+  ClipboardMinus,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -71,8 +72,8 @@ const DeleteClass = ({
           <DialogTitle>Delete Class</DialogTitle>
         </DialogHeader>
         <p>
-          Are you sure you want to delete the class <b>{className}</b> in the{" "}
-          <b>{supercategory}</b> category?
+          Remove the class <b>{className}</b> in the <b>{supercategory}</b> from
+          the workspace?
         </p>
         <DialogFooter>
           <Button variant="destructive" onClick={handleDelete}>
@@ -99,6 +100,8 @@ export default function AnnotationControls() {
     redo,
     selectedImageId,
     setClasses,
+    setAllowAnnotationDelete,
+    allowAnnotationDelete,
   } = useAnnotationStore();
   const { isCrowded, setIsCrowded } = useAnnotationStore();
   const { saveAnnotations } = useSaveAnnotations();
@@ -274,6 +277,17 @@ export default function AnnotationControls() {
             </div>
           )}
         </div>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            setActiveTool("none");
+            setAllowAnnotationDelete();
+          }}
+          className={`
+              ${allowAnnotationDelete && "bg-gray-500"}`}
+        >
+          <ClipboardMinus size={16} />
+        </Button>
       </div>
 
       <div className="border-t my-2 w-full border-gray-600" />

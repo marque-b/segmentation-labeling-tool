@@ -29,6 +29,7 @@ interface AnnotationState {
   classIdCounter: number;
   annotationIdCounter: number;
   isCrowded: 0 | 1;
+  allowAnnotationDelete: boolean;
   setSelectedImageId: (id: number | null) => void;
   addClass: (name: string, supercategory: string, color: string) => void;
   removeClass: (id: number) => void;
@@ -50,6 +51,7 @@ interface AnnotationState {
   setAnnotations: (annotations: Annotation[]) => void;
   setHistory: (history: HistoryState[]) => void;
   setClasses: (classes: AnnotationClass[]) => void;
+  setAllowAnnotationDelete: () => void;
 }
 
 export const useAnnotationStore = create<AnnotationState>((set, get) => ({
@@ -65,6 +67,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   annotations: [],
   annotationIdCounter: 1,
   isCrowded: 0,
+  allowAnnotationDelete: false,
 
   addClass: (name, supercategory, color) =>
     set((state) => {
@@ -287,6 +290,9 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       annotationIdCounter: annotationIdCounter + 1,
     });
   },
+
+  setAllowAnnotationDelete: () =>
+    set((state) => ({ allowAnnotationDelete: !state.allowAnnotationDelete })),
 }));
 
 export function decodeRLE(
@@ -305,6 +311,7 @@ export function decodeRLE(
   }
   return binaryMask;
 }
+
 export function encodeRLE(binaryMask: Uint8Array): number[] {
   const rle: number[] = [];
   let count = 0;

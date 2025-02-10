@@ -205,17 +205,21 @@ export const useCOCOStore = create<COCOState>()((set, get) => ({
     newAnnotations: Annotation[]
   ) =>
     set((state) => ({
-      datasets: state.datasets.map((dataset) =>
-        dataset.id === datasetId
-          ? {
-              ...dataset,
-              annotations: [
-                ...dataset.annotations.filter((ann) => ann.imageId !== imageId),
-                ...newAnnotations.filter((ann) => ann.segmentation !== null),
-              ],
-            }
-          : dataset
-      ),
+      datasets: state.datasets.map((dataset) => {
+        if (dataset.id !== datasetId) return dataset;
+        const updatedAnnotations = [
+          ...dataset.annotations.filter(
+            (ann) =>
+              ann.imageId !== imageId ||
+              !newAnnotations.some((newAnn) => newAnn.classId === ann.classId)
+          ),
+          ...newAnnotations.filter((ann) => ann.segmentation !== null),
+        ];
+        return {
+          ...dataset,
+          annotations: updatedAnnotations,
+        };
+      }),
     })),
 
   updateDatasetCategories: (datasetId: string, newCategories: Category[]) =>

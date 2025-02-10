@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Canvas } from "fabric";
+import { Canvas, FabricImage } from "fabric";
 import { ImageData } from "./EditorPage";
 import { useAnnotationStore } from "@/store/useAnnotationStore";
 import { usePolygonTool } from "@/hooks/usePolygonTool";
@@ -7,10 +7,11 @@ import { useBrushTool } from "@/hooks/useBrushTool";
 // import { useEraserTool } from "@/hooks/useEraserTool";
 // import { useRenderMask } from "@/hooks/useRenderMask";
 import DialogSaveAnnotations from "./DialogSaveAnnotations";
-import { useCOCOStore } from "@/store/useCOCOStore";
+import { Segmentation, useCOCOStore } from "@/store/useCOCOStore";
 import { useBlocker, useNavigate } from "react-router-dom";
 import { useSaveAnnotations } from "@/hooks/useSaveAnnotations";
 import { useFixedAnnotations } from "@/hooks/useFixedAnnotations";
+import { createMaskCanvas } from "@/utils/maskUtils";
 
 interface AnnotationCanvasProps {
   imageData: ImageData;
@@ -58,14 +59,24 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
     setHistory([]);
 
     if (fabricRef.current) {
+      fabricRef.current.clear();
       fabricRef.current.dispose();
       fabricRef.current = null;
     }
   };
 
+  const clearHistoryAndAnnotations = () => {
+    setAnnotations([]);
+    setHistory([]);
+  };
+
   const handleSaveAnnotations = () => {
     saveAnnotations();
-    clearStage();
+    if (nextLocation) {
+      clearStage();
+    } else {
+      clearHistoryAndAnnotations();
+    }
     setShowDialog(false);
 
     if (pendingTool !== null) {
@@ -78,7 +89,6 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
       prevClassRef.current = pendingClass;
       setPendingClass(null);
     }
-
     if (pendingCrowded !== null) {
       setIsCrowded(pendingCrowded);
       prevCrowdedRef.current = pendingCrowded;
@@ -150,6 +160,18 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
 
     return annotationsChanged || categoriesChanged;
   };
+
+  function isRLE(
+    seg: Segmentation | null | undefined
+  ): seg is { counts: number[]; size: [number, number] } {
+    return (
+      seg !== null &&
+      seg !== undefined &&
+      typeof seg === "object" &&
+      "counts" in seg &&
+      "size" in seg
+    );
+  }
 
   useEffect(() => {
     setActiveTool("none");
@@ -230,21 +252,21 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
     fabricRef.current = canvas;
     setCanvas(canvas);
 
-    const lockAllObjects = () => {
-      canvas.getObjects().forEach((obj) => {
-        obj.set({
-          selectable: false,
-          evented: false,
-          lockMovementX: true,
-          lockMovementY: true,
-          hasControls: false,
-          hoverCursor: "default",
-        });
-      });
-      canvas.renderAll();
-    };
-    lockAllObjects();
-    canvas.on("object:added", () => lockAllObjects());
+    // const lockAllObjects = () => {
+    //   canvas.getObjects().forEach((obj) => {
+    //     obj.set({
+    //       selectable: false,
+    //       evented: false,
+    //       lockMovementX: true,
+    //       lockMovementY: true,
+    //       hasControls: true,
+    //       hoverCursor: "default",
+    //     });
+    //   });
+    //   canvas.renderAll();
+    // };
+    // lockAllObjects();
+    // canvas.on("object:added", () => lockAllObjects());
 
     return () => {
       if (annotations.length > 0) {
@@ -255,6 +277,38 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
       }
     };
   }, [imageData]);
+
+  useEffect(() => {
+    if (!fabricRef.current || !datasets || !selectedImageId) return;
+    const canvas = fabricRef.current;
+    const dataset = datasets.find((d) =>
+      d.images.some((img) => img.id === selectedImageId)
+    );
+    if (!dataset) return;
+    dataset.annotations
+      .filter(
+        (ann) => ann.imageId === selectedImageId && isRLE(ann.segmentation)
+      )
+      .forEach((ann) => {
+        const segmentation = ann.segmentation as {
+          counts: number[];
+          size: [number, number];
+        };
+        const category = dataset.categories.find(
+          (cat) => cat.id === ann.classId
+        );
+        const color = category?.color || "#000000";
+        const maskCanvas = createMaskCanvas(segmentation, color);
+        const maskImage = new FabricImage(maskCanvas, {
+          left: 0,
+          top: 0,
+          selectable: false,
+          evented: false,
+        });
+        canvas.add(maskImage);
+      });
+    canvas.renderAll();
+  }, [datasets, selectedImageId]);
 
   useEffect(() => {
     return () => {
