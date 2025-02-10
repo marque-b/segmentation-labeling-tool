@@ -66,9 +66,6 @@ export function usePolygonTool(canvas: Canvas | null, active: boolean) {
       (first.x - last.x) ** 2 + (first.y - last.y) ** 2
     );
     if (distance < 10) {
-      console.log(
-        "[usePolygonTool] Último ponto está próximo do primeiro; sobrescrevendo último ponto."
-      );
       points[points.length - 1] = { ...first };
     }
 

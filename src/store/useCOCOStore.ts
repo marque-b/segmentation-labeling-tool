@@ -201,31 +201,20 @@ export const useCOCOStore = create<COCOState>()((set, get) => ({
 
   updateDatasetAnnotations: (
     datasetId: string,
-    imageId: number,
+    _imageId: number,
     newAnnotations: Annotation[]
   ) =>
     set((state) => ({
       datasets: state.datasets.map((dataset) => {
         if (dataset.id !== datasetId) return dataset;
-        console.log(
-          "[updateDatasetAnnotations] Before update, dataset.annotations:",
-          dataset.annotations
-        );
-        console.log(
-          "[updateDatasetAnnotations] New annotations to add:",
-          newAnnotations
-        );
-        // Cria um Map para mesclar as anotações por id
+
         const mergedMap = new Map<number, Annotation>();
         dataset.annotations.forEach((ann) => mergedMap.set(ann.id, ann));
         newAnnotations
           .filter((ann) => ann.segmentation !== null)
           .forEach((ann) => mergedMap.set(ann.id, ann));
         const updatedAnnotations = Array.from(mergedMap.values());
-        console.log(
-          "[updateDatasetAnnotations] After update, merged annotations:",
-          updatedAnnotations
-        );
+
         return {
           ...dataset,
           annotations: updatedAnnotations,

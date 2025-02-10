@@ -92,18 +92,10 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     })),
 
   selectClass: (id: number | null) => {
-    console.log(
-      "[selectClass] previous selectedClassId:",
-      get().selectedClassId,
-      "new id:",
-      id
-    );
     set((state) => {
       const newSelectedId = state.selectedClassId === id ? null : id;
-      console.log("[selectClass] new selectedClassId:", newSelectedId);
       const newActiveTool =
         state.selectedClassId === id ? "none" : state.activeTool;
-      console.log("[selectClass] new activeTool:", newActiveTool);
       return {
         selectedClassId: newSelectedId,
         activeTool: newActiveTool,
@@ -210,11 +202,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   ) => {
     const { selectedClassId, annotationIdCounter, annotations, isCrowded } =
       get();
-    console.log("[saveBrushMaskToStage] selectedClassId:", selectedClassId);
-    console.log(
-      "[saveBrushMaskToStage] current stage annotations:",
-      annotations
-    );
+
     if (!selectedClassId) return;
 
     const existingIndex = annotations.findIndex((ann) => {
@@ -229,16 +217,12 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
     if (existingIndex !== -1) {
       const existingAnnotation = annotations[existingIndex];
-      console.log(
-        "[saveBrushMaskToStage] Merging with existing annotation:",
-        existingAnnotation
-      );
+
       const existingSeg = existingAnnotation.segmentation as {
         counts: number[];
         size: [number, number];
       };
       const mergedRLE = mergeRLE(existingSeg.counts, rle, width, height);
-      console.log("[saveBrushMaskToStage] mergedRLE:", mergedRLE);
       const mergedMask = decodeRLE(mergedRLE, width, height);
       const newArea = mergedMask.reduce((sum, val) => sum + val, 0);
       const newBbox = calculateMaskBBox(mergedMask, width, height);
@@ -253,10 +237,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       };
       const newAnnotations = [...annotations];
       newAnnotations[existingIndex] = updatedAnnotation;
-      console.log(
-        "[saveBrushMaskToStage] Updated stage annotations after merge:",
-        newAnnotations
-      );
+
       set({ annotations: newAnnotations });
     } else {
       const mask = decodeRLE(rle, width, height);
@@ -274,19 +255,12 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         iscrowd: isCrowded,
         bbox,
       };
-      console.log(
-        "[saveBrushMaskToStage] Creating new annotation:",
-        newAnnotation
-      );
+
       set({
         annotations: [...annotations, newAnnotation],
         annotationIdCounter: annotationIdCounter + 1,
       });
     }
-    console.log(
-      "[saveBrushMaskToStage] Final stage annotations:",
-      get().annotations
-    );
   },
 
   savePolygonToDataset: (points: { x: number; y: number }[]) => {
@@ -342,18 +316,16 @@ export function decodeRLE(
 export function encodeRLE(binaryMask: Uint8Array): number[] {
   const rle: number[] = [];
   let count = 0;
-  let current = binaryMask[0];
-
+  let current = 0;
   for (let i = 0; i < binaryMask.length; i++) {
     if (binaryMask[i] === current) {
       count++;
     } else {
       rle.push(count);
-      count = 1;
       current = binaryMask[i];
+      count = 1;
     }
   }
-
   rle.push(count);
   return rle;
 }
@@ -373,7 +345,7 @@ function mergeRLE(
   return encodeRLE(mergedMask);
 }
 
-function calculateMaskBBox(
+export function calculateMaskBBox(
   binaryMask: Uint8Array,
   width: number,
   height: number
@@ -415,4 +387,18 @@ function calculateBoundingBox(
   const maxX = Math.max(...xs);
   const maxY = Math.max(...ys);
   return [minX, minY, maxX - minX, maxY - minY];
+}
+
+export function hexToRgb(hex: string) {
+  hex = hex.replace("#", "");
+  if (hex.length === 3) {
+    hex = hex
+      .split("")
+      .map((ch) => ch + ch)
+      .join("");
+  }
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  return { r, g, b };
 }

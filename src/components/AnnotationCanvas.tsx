@@ -4,8 +4,7 @@ import { ImageData } from "./EditorPage";
 import { useAnnotationStore } from "@/store/useAnnotationStore";
 import { usePolygonTool } from "@/hooks/usePolygonTool";
 import { useBrushTool } from "@/hooks/useBrushTool";
-// import { useEraserTool } from "@/hooks/useEraserTool";
-// import { useRenderMask } from "@/hooks/useRenderMask";
+import { useEraserTool } from "@/hooks/useEraserTool";
 import DialogSaveAnnotations from "./DialogSaveAnnotations";
 import { Segmentation, useCOCOStore } from "@/store/useCOCOStore";
 import { useBlocker, useNavigate } from "react-router-dom";
@@ -179,6 +178,10 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
   }, [selectedImageId]);
 
   useEffect(() => {
+    if (activeTool === "eraser" || activeTool === "brush") {
+      prevToolRef.current = activeTool;
+      return;
+    }
     if (activeTool !== prevToolRef.current) {
       if (
         annotations.length > 0 &&
@@ -193,7 +196,6 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
       }
     }
   }, [activeTool]);
-
   useEffect(() => {
     if (selectedClassId !== prevClassRef.current) {
       if (prevClassRef.current !== null && hasUnsavedChanges()) {
@@ -303,7 +305,7 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
   useFixedAnnotations(fabricRef.current, selectedImageId);
   usePolygonTool(fabricRef.current, activeTool === "polygon");
   useBrushTool(fabricRef.current, activeTool === "brush");
-  // useEraserTool(fabricRef.current, activeTool === "eraser");
+  useEraserTool(fabricRef.current, activeTool === "eraser");
 
   return (
     <>

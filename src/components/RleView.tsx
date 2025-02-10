@@ -53,7 +53,6 @@ const RleView: React.FC = () => {
 
       const { width, height } = dataset.images[0];
 
-      // Initialize Fabric canvas with proper typing
       fabricRef.current = new Canvas(canvasRef.current, {
         width,
         height,
@@ -63,7 +62,6 @@ const RleView: React.FC = () => {
 
       const canvas = fabricRef.current;
 
-      // Process each annotation
       for (const ann of dataset.annotations) {
         if (
           ann.segmentation &&
@@ -74,16 +72,13 @@ const RleView: React.FC = () => {
           const { counts, size } = ann.segmentation;
           const [maskHeight, maskWidth] = size;
 
-          // Get category color
           const category = dataset.categories.find(
             (cat) => cat.id === ann.classId
           );
           const categoryColor = category?.color || "#ff0000";
 
-          // Create binary mask
           const binaryMask = decodeRLE(counts, maskWidth, maskHeight);
 
-          // Create off-screen canvas
           const offCanvas = document.createElement("canvas");
           offCanvas.width = maskWidth;
           offCanvas.height = maskHeight;
@@ -91,32 +86,27 @@ const RleView: React.FC = () => {
 
           if (!ctx) continue;
 
-          // Create image data
           const imageData = ctx.createImageData(maskWidth, maskHeight);
           const { r, g, b } = hexToRgb(categoryColor);
 
-          // Fill image data
           for (let i = 0; i < binaryMask.length; i++) {
             const offset = i * 4;
             if (binaryMask[i] === 1) {
               imageData.data[offset] = r;
               imageData.data[offset + 1] = g;
               imageData.data[offset + 2] = b;
-              imageData.data[offset + 3] = 128; // Semi-transparent
+              imageData.data[offset + 3] = 128;
             } else {
-              imageData.data[offset + 3] = 0; // Transparent
+              imageData.data[offset + 3] = 0;
             }
           }
 
           ctx.putImageData(imageData, 0, 0);
 
           try {
-            // Create Fabric image using async/await
             const fabricImage = await FabricImage.fromURL(
               offCanvas.toDataURL(),
               {
-                left: ann.bbox?.[0] || 0,
-                top: ann.bbox?.[1] || 0,
                 selectable: false,
                 evented: false,
               }
