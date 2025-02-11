@@ -116,7 +116,6 @@ interface COCOState {
   removeDataset: (id: string) => void;
   addImageToDataset: (datasetId: string, image: Image) => void;
   addImageFile: (datasetId: string, file: File) => void;
-  exportDataset: (id: string) => Dataset | undefined;
   removeImageFromDataset: (datasetId: string, fileName: string) => void;
   updateImageLicense: (
     datasetId: string,
@@ -289,14 +288,8 @@ export const useCOCOStore = create<COCOState>()((set, get) => ({
       }),
     })),
 
-  exportDataset: (id: string): any => {
+  exportDatasetToJson: (id: string) => {
     const dataset = get().datasets.find((dataset) => dataset.id === id);
-    if (!dataset) return undefined;
-    return;
-  },
-
-  exportDatasetToJson: (datasetId: string) => {
-    const dataset = get().exportDataset(datasetId);
     if (!dataset) {
       console.error("Dataset not found.");
       return;
@@ -309,7 +302,7 @@ export const useCOCOStore = create<COCOState>()((set, get) => ({
 
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${dataset.info.description || "dataset"}.json`;
+    link.download = `${formattedDataset.info.description || "dataset"}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
