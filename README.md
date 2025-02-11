@@ -1,17 +1,24 @@
 ```markdown
-███████ ███████ ███████ ███████  
- ██ ██ ██ ██ ██ ██
-██ ██ ██ ██ ██ ██
-██ ██ ██ ██ ██ ██
-███████ ███████ ███████ ███████
+<pre>  
+  ███████   ███████    ███████   ███████  
+ ██        ██     ██  ██        ██     ██ 
+ ██        ██     ██  ██        ██     ██ 
+ ██        ██     ██  ██        ██     ██ 
+  ███████   ███████    ███████   ███████  
+</pre>
 
-# **Introduction**
+# Introduction
 
-Coco Annotations is an intuitive image annotation tool designed for creating and managing datasets in the COCO format on the go. Whether you're working on object detection, segmentation, or other computer vision tasks, this tool streamlines the annotation process and ensures compatibility with industry-standard datasets.
+Coco Annotations is an intuitive image annotation tool designed for creating and managing
+datasets in the COCO format on the go. Whether you're working on object detection,
+segmentation, or other computer vision tasks, this tool streamlines the annotation
+process and ensures compatibility with industry-standard datasets.
 
-With an easy-to-use interface, Coco Annotations enables users to efficiently label images, manage datasets, and export structured annotations. It supports bounding boxes, polygons, and segmentation masks, ensuring flexibility for different machine learning applications.
+With an easy-to-use interface, Coco Annotations enables users to efficiently label images,
+manage datasets, and export structured annotations. It supports bounding boxes, polygons,
+and segmentation masks, ensuring flexibility for different machine learning applications.
 
-## ** Installation**
+## Installation
 
 1. Clone this repository
 
