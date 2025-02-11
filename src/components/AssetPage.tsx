@@ -44,7 +44,7 @@ export default function AssetPage() {
   if (!dataset) return <div className="container">Dataset not found</div>;
 
   return (
-    <div className="container">
+    <div className="container mt-12">
       <h1 className="text-2xl font-bold">{dataset.info.description}</h1>
       <div className="text-secondary-foreground space-y-1 mt-4 mb-8">
         <div className="flex items-center space-x-2">

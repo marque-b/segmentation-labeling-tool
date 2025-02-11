@@ -29,7 +29,7 @@ export default function DialogSaveAnnotations({
         <p>
           You have unsaved annotations. Do you want to save them before exiting?
         </p>
-        <DialogFooter>
+        <DialogFooter className="gap-y-3">
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
