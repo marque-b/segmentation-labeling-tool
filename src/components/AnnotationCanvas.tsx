@@ -11,6 +11,7 @@ import { useBlocker, useNavigate } from "react-router-dom";
 import { useSaveAnnotations } from "@/hooks/useSaveAnnotations";
 import { useFixedAnnotations } from "@/hooks/useFixedAnnotations";
 import { createMaskCanvas } from "@/utils/maskUtils";
+import { useEraserTool } from "@/hooks/useEraserTool";
 
 interface AnnotationCanvasProps {
   imageData: ImageData;

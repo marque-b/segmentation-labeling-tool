@@ -296,6 +296,8 @@ export function useEraserTool(canvas: Canvas | null, active: boolean) {
 
           canvas.add(maskImage);
           canvas.renderAll();
+          removeAnnotationById(ann.id);
+
           saveBrushMaskToStage(updatedRLE, w, h, ann.imageId);
         } else {
           console.log("Sem overlap para anotação", ann.id);
