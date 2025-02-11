@@ -135,7 +135,14 @@ export default function AnnotationControls() {
 
     if (!dataset) return;
 
-    setClasses(dataset.categories);
+    setClasses(
+      dataset.categories.map((cat) => ({
+        id: cat.id,
+        name: cat.name,
+        supercategory: cat.supercategory,
+        color: cat.color ?? "#000000",
+      }))
+    );
   }, [selectedImageId, datasets, setClasses]);
 
   return (

@@ -30,7 +30,14 @@ export default function AssetPage() {
 
   useEffect(() => {
     if (dataset) {
-      setClasses(dataset.categories);
+      setClasses(
+        dataset.categories.map((cat) => ({
+          id: cat.id,
+          name: cat.name,
+          supercategory: cat.supercategory,
+          color: cat.color ?? "#000000",
+        }))
+      );
     }
   }, [dataset, setClasses]);
 
