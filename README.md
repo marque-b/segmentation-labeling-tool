@@ -1,11 +1,10 @@
-````markdown
-<pre>  
-  ███████   ███████    ███████   ███████  
- ██        ██     ██  ██        ██     ██ 
- ██        ██     ██  ██        ██     ██ 
- ██        ██     ██  ██        ██     ██ 
-  ███████   ███████    ███████   ███████  
-</pre>
+````plaintext
+  ███████   ███████    ███████   ███████
+ ██        ██     ██  ██        ██     ██
+ ██        ██     ██  ██        ██     ██
+ ██        ██     ██  ██        ██     ██
+  ███████   ███████    ███████   ███████
+```
 
 # Introduction
 
@@ -50,22 +49,22 @@ npm run dev -- --host # To expose on local network for mobile use
 
 ## How to Use
 
-1. **Initialize Dataset**  
+1. **Initialize Dataset**
    Create a Dataset with required info.
 
-2. **Upload images**  
+2. **Upload images**
    Add images to the workspace for annotation.
 
-3. **Add Categories**  
+3. **Add Categories**
    Before starting annotating, create at least one category.
 
-4. **Annotate objects**  
+4. **Annotate objects**
    Use polygons or segmentation masks to label objects.
 
-5. **Manage datasets**  
+5. **Manage datasets**
    Organize and edit annotations directly within the interface.
 
-6. **Export in COCO format**  
+6. **Export in COCO format**
    Save annotations as a COCO JSON file for machine learning pipelines.
 
 ## Technologies
