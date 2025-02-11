@@ -1,4 +1,4 @@
-```markdown
+````markdown
 <pre>  
   ███████   ███████    ███████   ███████  
  ██        ██     ██  ██        ██     ██ 
@@ -24,13 +24,18 @@ and segmentation masks, ensuring flexibility for different machine learning appl
 
 2. Install dependecies
 
-   npm install # or use yarn: yarn install
+```bash
+npm install # or use yarn: yarn install
+```
+````
 
 3. Run build
 
+```bash
    npm run build
    npm run preview #or
    npm run preview -- --host # To expose on local network for mobile use
+```
 
 This will generate an optimized build and serve it locally.
 To test the tool on a mobile device, access it using your local network IP.
@@ -39,6 +44,7 @@ To test the tool on a mobile device, access it using your local network IP.
 
 Use this mode if you plan to make modifications and need hot-reloading.
 
+```bash
     npm run dev #or
     npm run dev -- --host # To expose on local network for mobile use
 ```
