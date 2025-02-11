@@ -1,8 +1,50 @@
 import { create } from "zustand";
 import { v4 as uuidv4 } from "uuid";
 import { useAnnotationStore } from "./useAnnotationStore";
+import { licenses } from "@/assets/licenses";
+
+export interface COCOExport {
+  id?: string;
+  info: {
+    description: string;
+    url: string;
+    version: string;
+    year: number;
+    contributor: string;
+    date_created: string;
+  };
+  licenses: { id: number; name: string; url: string }[];
+  images: {
+    id: number;
+    license: number;
+    file_name: string;
+    coco_url: string;
+    height: number;
+    width: number;
+    date_captured: string;
+    flickr_url: string;
+  }[];
+  annotations: {
+    id: number;
+    category_id: number;
+    image_id: number;
+    segmentation:
+      | number[][]
+      | { counts: number[]; size: [number, number] }
+      | null;
+    area: number;
+    iscrowd: 0 | 1;
+    bbox: [number, number, number, number];
+  }[];
+  categories: {
+    id: number;
+    name: string;
+    supercategory: string;
+  }[];
+}
 
 interface Info {
+  id?: string;
   description: string;
   url: string;
   version: string;
@@ -53,7 +95,7 @@ export interface Category {
   supercategory: string;
   id: number;
   name: string;
-  color: string;
+  color?: string;
 }
 
 export interface Dataset {
@@ -165,20 +207,6 @@ export const useCOCOStore = create<COCOState>()((set, get) => ({
       ),
     })),
 
-  exportDataset: (id) => {
-    const dataset = get().datasets.find((dataset) => dataset.id === id);
-    if (!dataset) return undefined;
-
-    const { annotations } = useAnnotationStore.getState();
-
-    return {
-      ...dataset,
-      annotations: annotations.filter((ann) =>
-        dataset.images.some((img) => img.id === ann.imageId)
-      ),
-    };
-  },
-
   updateImageLicense: (
     datasetId: string,
     fileName: string,
@@ -261,6 +289,12 @@ export const useCOCOStore = create<COCOState>()((set, get) => ({
       }),
     })),
 
+  exportDataset: (id: string): any => {
+    const dataset = get().datasets.find((dataset) => dataset.id === id);
+    if (!dataset) return undefined;
+    return;
+  },
+
   exportDatasetToJson: (datasetId: string) => {
     const dataset = get().exportDataset(datasetId);
     if (!dataset) {
@@ -268,7 +302,8 @@ export const useCOCOStore = create<COCOState>()((set, get) => ({
       return;
     }
 
-    const jsonData = JSON.stringify(dataset, null, 2);
+    const formattedDataset = formatDatasetForExport(dataset);
+    const jsonData = JSON.stringify(formattedDataset, null, 2);
     const blob = new Blob([jsonData], { type: "application/json" });
     const url = URL.createObjectURL(blob);
 
@@ -282,3 +317,44 @@ export const useCOCOStore = create<COCOState>()((set, get) => ({
     URL.revokeObjectURL(url);
   },
 }));
+
+const formatDatasetForExport = (dataset: Dataset): COCOExport => {
+  const annotations = dataset.annotations.map((ann) => ({
+    id: ann.id,
+    category_id: ann.classId,
+    image_id: ann.imageId,
+    segmentation: ann.segmentation
+      ? Array.isArray(ann.segmentation)
+        ? ann.segmentation
+        : { counts: ann.segmentation.counts, size: ann.segmentation.size }
+      : null,
+    area: ann.area,
+    iscrowd: ann.iscrowd,
+    bbox: ann.bbox,
+  }));
+
+  const licenseIds = new Set(dataset.images.map((img) => img.license));
+  const datasetLicenses = licenses.filter((license) =>
+    licenseIds.has(license.id)
+  );
+
+  const images = dataset.images.map((img, index) => ({
+    id: img.id ?? index + 1,
+    license: img.license,
+    file_name: img.file_name,
+    coco_url: img.coco_url,
+    height: img.height,
+    width: img.width,
+    date_captured: img.date_captured,
+    flickr_url: img.flickr_url,
+  }));
+
+  return {
+    id: dataset.id,
+    info: dataset.info,
+    licenses: datasetLicenses,
+    images,
+    annotations,
+    categories: dataset.categories,
+  };
+};
