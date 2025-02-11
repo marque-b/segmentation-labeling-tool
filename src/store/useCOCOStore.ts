@@ -49,7 +49,7 @@ export interface Annotation {
   bbox: [number, number, number, number];
 }
 
-interface Category {
+export interface Category {
   supercategory: string;
   id: number;
   name: string;
@@ -204,8 +204,11 @@ export const useCOCOStore = create<COCOState>()((set, get) => ({
     _imageId: number,
     newAnnotations: Annotation[]
   ) =>
-    set((state) => ({
-      datasets: state.datasets.map((dataset) => {
+    set((state) => {
+      const datasetIndex = state.datasets.findIndex((d) => d.id === datasetId);
+      if (datasetIndex === -1) return state;
+
+      const updatedDatasets = state.datasets.map((dataset) => {
         if (dataset.id !== datasetId) return dataset;
 
         const mergedMap = new Map<number, Annotation>();
@@ -213,14 +216,32 @@ export const useCOCOStore = create<COCOState>()((set, get) => ({
         newAnnotations
           .filter((ann) => ann.segmentation !== null)
           .forEach((ann) => mergedMap.set(ann.id, ann));
-        const updatedAnnotations = Array.from(mergedMap.values());
 
-        return {
-          ...dataset,
-          annotations: updatedAnnotations,
-        };
-      }),
-    })),
+        return { ...dataset, annotations: Array.from(mergedMap.values()) };
+      });
+
+      const annotationState = useAnnotationStore.getState();
+
+      return {
+        datasets: updatedDatasets,
+        history: [
+          {
+            canvasObjects: JSON.stringify(
+              (annotationState.canvas as any).toJSON(["backgroundImage", "src"])
+            ),
+            annotations: JSON.parse(JSON.stringify(newAnnotations)),
+            selectedClassId: annotationState.selectedClassId,
+            activeTool: annotationState.activeTool,
+            brushSize: annotationState.brushSize,
+            selectedImageId: annotationState.selectedImageId,
+            isCrowded: annotationState.isCrowded,
+            allowAnnotationDelete: annotationState.allowAnnotationDelete,
+            timestamp: Date.now(),
+          },
+        ],
+        currentHistoryIndex: 0,
+      };
+    }),
 
   updateDatasetCategories: (datasetId: string, newCategories: Category[]) =>
     set((state) => ({

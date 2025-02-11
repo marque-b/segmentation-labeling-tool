@@ -123,11 +123,12 @@ export function useFixedAnnotations(
         }
         canvas.add(polygon);
         const [bboxX, bboxY, bboxW, bboxH] = ann.bbox;
+        const padding = 1;
         const bboxRect = new Rect({
-          left: bboxX,
-          top: bboxY,
-          width: bboxW,
-          height: bboxH,
+          left: bboxX - padding,
+          top: bboxY - padding,
+          width: bboxW + padding * 2,
+          height: bboxH + padding * 2,
           fill: "transparent",
           stroke: strokeColor,
           strokeWidth: 2,

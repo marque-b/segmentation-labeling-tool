@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { Canvas } from "fabric";
-import { Annotation, useCOCOStore } from "./useCOCOStore";
+import { Annotation, Category, useCOCOStore } from "./useCOCOStore";
 import { decodeRLE, mergeRLE } from "@/utils/rleUtils";
 import {
   calculateArea,
@@ -11,16 +11,24 @@ import {
 export type Tool = "polygon" | "brush" | "eraser" | "none";
 export type PositionMode = "precision" | "direct";
 
+interface HistoryState {
+  canvasObjects: string;
+  annotations: Annotation[];
+  selectedClassId: number | null;
+  activeTool: "polygon" | "brush" | "eraser" | "none";
+  brushSize: number;
+  selectedImageId: number | null;
+  isCrowded: 0 | 1;
+  allowAnnotationDelete: boolean;
+  timestamp: number;
+  classes: Category[];
+}
+
 export interface AnnotationClass {
   id: number;
   name: string;
   supercategory: string;
   color: string;
-}
-
-interface HistoryState {
-  objects: string;
-  timestamp: number;
 }
 interface AnnotationState {
   classes: AnnotationClass[];
@@ -136,68 +144,93 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     }),
 
   saveHistory: () => {
-    const { canvas } = get();
+    const {
+      canvas,
+      annotations,
+      selectedClassId,
+      activeTool,
+      brushSize,
+      selectedImageId,
+      isCrowded,
+      allowAnnotationDelete,
+      history,
+      currentHistoryIndex,
+    } = get();
     if (!canvas) return;
+
     const newState: HistoryState = {
-      objects: JSON.stringify(
+      canvasObjects: JSON.stringify(
         (canvas as any).toJSON(["backgroundImage", "src"])
       ),
+      annotations: JSON.parse(JSON.stringify(annotations)),
+      selectedClassId,
+      activeTool,
+      brushSize,
+      selectedImageId,
+      isCrowded,
+      allowAnnotationDelete,
       timestamp: Date.now(),
+      classes: [],
     };
-    set((state) => {
-      const newHistory = state.history.slice(0, state.currentHistoryIndex + 1);
-      return {
-        history: [...newHistory, newState],
-        currentHistoryIndex: newHistory.length,
-      };
+
+    const newHistory = history.slice(0, currentHistoryIndex + 1);
+    if (newHistory.length >= 12) {
+      newHistory.shift();
+    }
+
+    set({
+      history: [...newHistory, newState],
+      currentHistoryIndex: newHistory.length,
     });
   },
 
   undo: () => {
-    const { canvas, currentHistoryIndex, history } = get();
+    const { canvas, history, currentHistoryIndex } = get();
     if (!canvas || currentHistoryIndex <= 0) return;
+
     const previousState = history[currentHistoryIndex - 1];
-    canvas.loadFromJSON(previousState.objects, () => {
+
+    canvas.loadFromJSON(previousState.canvasObjects, () => {
       canvas.getObjects().forEach((obj) => {
-        if (obj.type === "image") {
-          obj.set({
-            selectable: false,
-            evented: false,
-            hasControls: false,
-            lockMovementX: true,
-            lockMovementY: true,
-            hoverCursor: "default",
-          });
-        }
+        obj.set({ visible: true });
       });
-      setTimeout(() => {
-        canvas.renderAll();
-      }, 10);
-      set({ currentHistoryIndex: currentHistoryIndex - 1 });
+      canvas.requestRenderAll();
+    });
+
+    set({
+      annotations: JSON.parse(JSON.stringify(previousState.annotations)),
+      selectedClassId: previousState.selectedClassId,
+      activeTool: previousState.activeTool,
+      brushSize: previousState.brushSize,
+      selectedImageId: previousState.selectedImageId,
+      isCrowded: previousState.isCrowded,
+      allowAnnotationDelete: previousState.allowAnnotationDelete,
+      currentHistoryIndex: currentHistoryIndex - 1,
     });
   },
 
   redo: () => {
-    const { canvas, currentHistoryIndex, history } = get();
+    const { canvas, history, currentHistoryIndex } = get();
     if (!canvas || currentHistoryIndex >= history.length - 1) return;
+
     const nextState = history[currentHistoryIndex + 1];
-    canvas.loadFromJSON(nextState.objects, () => {
+
+    canvas.loadFromJSON(nextState.canvasObjects, () => {
       canvas.getObjects().forEach((obj) => {
-        if (obj.type === "image") {
-          obj.set({
-            selectable: false,
-            evented: false,
-            hasControls: false,
-            lockMovementX: true,
-            lockMovementY: true,
-            hoverCursor: "default",
-          });
-        }
+        obj.set({ visible: true });
       });
-      setTimeout(() => {
-        canvas.renderAll();
-      }, 10);
-      set({ currentHistoryIndex: currentHistoryIndex + 1 });
+      canvas.requestRenderAll();
+    });
+
+    set({
+      annotations: JSON.parse(JSON.stringify(nextState.annotations)),
+      selectedClassId: nextState.selectedClassId,
+      activeTool: nextState.activeTool,
+      brushSize: nextState.brushSize,
+      selectedImageId: nextState.selectedImageId,
+      isCrowded: nextState.isCrowded,
+      allowAnnotationDelete: nextState.allowAnnotationDelete,
+      currentHistoryIndex: currentHistoryIndex + 1,
     });
   },
 
@@ -275,9 +308,42 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   },
 
   savePolygonToDataset: (points: { x: number; y: number }[]) => {
-    const { selectedClassId, selectedImageId, annotationIdCounter, isCrowded } =
-      get();
+    const {
+      selectedClassId,
+      selectedImageId,
+      annotationIdCounter,
+      isCrowded,
+      classes,
+    } = get();
     if (!selectedClassId || !selectedImageId) return;
+
+    const { datasets, updateDatasetAnnotations, updateDatasetCategories } =
+      useCOCOStore.getState();
+    const dataset = datasets.find((d) =>
+      d.images.some((img) => img.id === selectedImageId)
+    );
+    if (!dataset) return;
+
+    const selectedClass = classes.find((cls) => cls.id === selectedClassId);
+    if (!selectedClass) {
+      console.error("Selected class not found in state.");
+      return;
+    }
+
+    const categoryExists = dataset.categories.some(
+      (cat) => cat.id === selectedClassId
+    );
+
+    if (!categoryExists) {
+      updateDatasetCategories(dataset.id, [
+        {
+          id: selectedClass.id,
+          name: selectedClass.name,
+          supercategory: selectedClass.supercategory,
+          color: selectedClass.color,
+        },
+      ]);
+    }
 
     const newAnnotation: Annotation = {
       id: annotationIdCounter,
@@ -288,11 +354,6 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       iscrowd: isCrowded,
       bbox: calculateBoundingBox(points),
     };
-    const { datasets, updateDatasetAnnotations } = useCOCOStore.getState();
-    const dataset = datasets.find((d: any) =>
-      d.images.some((img: any) => img.id === selectedImageId)
-    );
-    if (!dataset) return;
 
     const updatedDatasetAnnotations = [...dataset.annotations, newAnnotation];
     updateDatasetAnnotations(
@@ -300,7 +361,25 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       selectedImageId,
       updatedDatasetAnnotations
     );
-    set({ annotationIdCounter: annotationIdCounter + 1 });
+
+    set({
+      annotationIdCounter: annotationIdCounter + 1,
+      history: [
+        {
+          canvasObjects: JSON.stringify(get().canvas?.toJSON()),
+          annotations: JSON.parse(JSON.stringify(updatedDatasetAnnotations)),
+          classes: JSON.parse(JSON.stringify(get().classes)),
+          selectedClassId: get().selectedClassId,
+          activeTool: get().activeTool,
+          brushSize: get().brushSize,
+          selectedImageId: get().selectedImageId,
+          isCrowded: get().isCrowded,
+          allowAnnotationDelete: get().allowAnnotationDelete,
+          timestamp: Date.now(),
+        },
+      ],
+      currentHistoryIndex: 0,
+    });
   },
 
   removeAnnotationById: (annotationId: number) => {
