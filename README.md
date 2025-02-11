@@ -1,10 +1,10 @@
-````plaintext
+```
   ███████   ███████    ███████   ███████
  ██        ██     ██  ██        ██     ██
  ██        ██     ██  ██        ██     ██
  ██        ██     ██  ██        ██     ██
   ███████   ███████    ███████   ███████
-
+```
 
 # Introduction
 
@@ -95,4 +95,7 @@ This stack ensures an efficient, scalable, and maintainable annotation tool.
 For more information or to get in touch, please visit my website:
 
 [brunomarques.dev](https://brunomarques.dev)
-````
+
+```
+
+```
