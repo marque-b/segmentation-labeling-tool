@@ -241,7 +241,7 @@ export default function AnnotationArea({ imageData }: AnnotationAreaProps) {
   return (
     <div
       ref={areaRef}
-      className="relative w-full h-full overflow-hidden bg-gray-900 select-none touch-none"
+      className="relative w-full h-full overflow-hidden select-none touch-none"
     >
       <div
         ref={contentRef}

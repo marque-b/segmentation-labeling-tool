@@ -39,7 +39,7 @@ export default function AssetCard({ dataset }: AssetCardProps) {
           Version: {dataset.info.version}
         </p>
         <p className="text-sm text-muted-foreground">
-          URL:{" "}
+          URL:
           <a href={dataset.info.url} target="_blank" className="text-blue-500">
             {dataset.info.url}
           </a>

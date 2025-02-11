@@ -39,7 +39,7 @@ export default function AssetPage() {
   return (
     <div className="container">
       <h1 className="text-2xl font-bold">{dataset.info.description}</h1>
-      <div className="text-secondary-foreground space-y-1 mt-4">
+      <div className="text-secondary-foreground space-y-1 mt-4 mb-8">
         <div className="flex items-center space-x-2">
           <CircleUser size="15" />
           <span>{dataset.info.contributor}</span>
@@ -56,7 +56,7 @@ export default function AssetPage() {
           <Link2 size="15" />
           <a href={dataset.info.url}>{dataset.info.url}</a>
         </div>
-        <div className="mt-6 flex flex-row gap-6">
+        <div className="mt-6 flex flex-row gap-6 justify-center md:justify-start">
           <DialogAddImage datasetId={dataset.id} />
 
           <Button

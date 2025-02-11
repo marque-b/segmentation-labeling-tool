@@ -23,7 +23,11 @@ import { Input } from "@/components/ui/input";
 import { FileJson } from "lucide-react";
 import { useState } from "react";
 
-function DialogAddInfo() {
+interface DialogAddInfoProps {
+  initialized: boolean;
+}
+
+function DialogAddInfo({ initialized }: DialogAddInfoProps) {
   const { addDataset } = useCOCOStore();
   const [open, setOpen] = useState(false);
 
@@ -47,9 +51,14 @@ function DialogAddInfo() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+      <DialogTrigger
+        asChild
+        className={` ${
+          !initialized && "flex flex-col h-[180px] w-[180px] rounded-full"
+        }`}
+      >
         <Button variant="outline">
-          <FileJson />
+          <FileJson className={`${!initialized && "!w-8 !h-8"}`} />
           Initialize Dataset
         </Button>
       </DialogTrigger>
