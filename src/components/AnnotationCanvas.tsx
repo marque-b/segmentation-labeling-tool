@@ -305,7 +305,7 @@ export default function AnnotationCanvas({ imageData }: AnnotationCanvasProps) {
   useFixedAnnotations(fabricRef.current, selectedImageId);
   usePolygonTool(fabricRef.current, activeTool === "polygon");
   useBrushTool(fabricRef.current, activeTool === "brush");
-  // useEraserTool(fabricRef.current, activeTool === "eraser");
+  useEraserTool(fabricRef.current, activeTool === "eraser");
 
   return (
     <>

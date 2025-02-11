@@ -52,6 +52,7 @@ interface AnnotationState {
   setHistory: (history: HistoryState[]) => void;
   setClasses: (classes: AnnotationClass[]) => void;
   setAllowAnnotationDelete: () => void;
+  removeAnnotationById: (annotationId: number) => void;
 }
 
 export const useAnnotationStore = create<AnnotationState>((set, get) => ({
@@ -292,43 +293,15 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     set({ annotationIdCounter: annotationIdCounter + 1 });
   },
 
+  removeAnnotationById: (annotationId: number) => {
+    set((state) => ({
+      annotations: state.annotations.filter((ann) => ann.id !== annotationId),
+    }));
+  },
+
   setAllowAnnotationDelete: () =>
     set((state) => ({ allowAnnotationDelete: !state.allowAnnotationDelete })),
 }));
-
-export function decodeRLE(
-  rle: number[],
-  width: number,
-  height: number
-): Uint8Array {
-  const binaryMask = new Uint8Array(width * height);
-  let index = 0;
-  for (let i = 0; i < rle.length; i++) {
-    const value = i % 2 === 0 ? 0 : 1;
-    const count = rle[i];
-    for (let j = 0; j < count; j++) {
-      binaryMask[index++] = value;
-    }
-  }
-  return binaryMask;
-}
-
-export function encodeRLE(binaryMask: Uint8Array): number[] {
-  const rle: number[] = [];
-  let count = 0;
-  let current = 0;
-  for (let i = 0; i < binaryMask.length; i++) {
-    if (binaryMask[i] === current) {
-      count++;
-    } else {
-      rle.push(count);
-      current = binaryMask[i];
-      count = 1;
-    }
-  }
-  rle.push(count);
-  return rle;
-}
 
 function mergeRLE(
   rle1: number[],
@@ -401,4 +374,73 @@ export function hexToRgb(hex: string) {
   const g = parseInt(hex.substring(2, 4), 16);
   const b = parseInt(hex.substring(4, 6), 16);
   return { r, g, b };
+}
+
+export function decodeRLE(
+  rle: number[],
+  width: number,
+  height: number
+): Uint8Array {
+  const binaryMask = new Uint8Array(width * height);
+  let index = 0;
+  for (let i = 0; i < rle.length; i++) {
+    const value = i % 2 === 0 ? 0 : 1;
+    const count = rle[i];
+    for (let j = 0; j < count; j++) {
+      binaryMask[index++] = value;
+    }
+  }
+  return binaryMask;
+}
+
+export function encodeRLE(binaryMask: Uint8Array): number[] {
+  const rle: number[] = [];
+  let count = 0;
+  let current = 0;
+  for (let i = 0; i < binaryMask.length; i++) {
+    if (binaryMask[i] === current) {
+      count++;
+    } else {
+      rle.push(count);
+      current = binaryMask[i];
+      count = 1;
+    }
+  }
+  rle.push(count);
+  return rle;
+}
+
+export function intersectRLE(
+  rle1: number[],
+  rle2: number[],
+  width: number,
+  height: number
+): number[] {
+  const mask1 = decodeRLE(rle1, width, height);
+  const mask2 = decodeRLE(rle2, width, height);
+  const intersection = new Uint8Array(mask1.length);
+
+  for (let i = 0; i < mask1.length; i++) {
+    intersection[i] = mask1[i] & mask2[i];
+  }
+
+  return encodeRLE(intersection);
+}
+
+export function subtractRLEForErase(
+  originalRLE: number[],
+  eraseRLE: number[],
+  width: number,
+  height: number
+): number[] {
+  const mask = decodeRLE(originalRLE, width, height);
+  const eraseMask = decodeRLE(eraseRLE, width, height);
+
+  for (let i = 0; i < mask.length; i++) {
+    if (eraseMask[i] === 1) {
+      mask[i] = 0;
+    }
+  }
+
+  return encodeRLE(mask);
 }

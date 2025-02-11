@@ -62,7 +62,6 @@ export function useFixedAnnotations(
         (cat: any) => cat.id === ann.classId
       );
       const strokeColor = category ? `${category.color}60` : "red";
-      // Caso seja uma máscara (RLE)
       if (
         ann.segmentation &&
         !Array.isArray(ann.segmentation) &&
@@ -168,7 +167,8 @@ export function useFixedAnnotations(
           selectable: false,
           evented: false,
           hasBorders: false,
-        });
+        }) as Rect & { fixedAnnotation?: boolean };
+        bboxRect.fixedAnnotation = true;
         canvas.add(bboxRect);
       }
     });
