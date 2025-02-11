@@ -1,0 +1,410 @@
+import { create } from "zustand";
+import { Canvas } from "fabric";
+import { Annotation, Category, useCOCOStore } from "./useCOCOStore";
+import { decodeRLE, mergeRLE } from "@/utils/rleUtils";
+import {
+  calculateArea,
+  calculateBoundingBox,
+  calculateMaskBBox,
+} from "@/utils/maskUtils";
+
+export type Tool = "polygon" | "brush" | "eraser" | "none";
+export type PositionMode = "precision" | "direct";
+
+interface HistoryState {
+  canvasObjects: string;
+  annotations: Annotation[];
+  selectedClassId: number | null;
+  activeTool: "polygon" | "brush" | "eraser" | "none";
+  brushSize: number;
+  selectedImageId: number | null;
+  isCrowded: 0 | 1;
+  allowAnnotationDelete: boolean;
+  timestamp: number;
+  classes: Category[];
+}
+
+export interface AnnotationClass {
+  id: number;
+  name: string;
+  supercategory: string;
+  color: string;
+}
+interface AnnotationState {
+  classes: AnnotationClass[];
+  selectedClassId: number | null;
+  activeTool: Tool;
+  brushSize: number;
+  history: HistoryState[];
+  currentHistoryIndex: number;
+  canvas: Canvas | null;
+  annotations: Annotation[];
+  selectedImageId: number | null;
+  classIdCounter: number;
+  annotationIdCounter: number;
+  isCrowded: 0 | 1;
+  allowAnnotationDelete: boolean;
+  setSelectedImageId: (id: number | null) => void;
+  addClass: (name: string, supercategory: string, color: string) => void;
+  removeClass: (id: number) => void;
+  selectClass: (id: number | null) => void;
+  setBrushSize: (size: number) => void;
+  setActiveTool: (tool: Tool) => void;
+  saveHistory: () => void;
+  undo: () => void;
+  redo: () => void;
+  setCanvas: (canvas: Canvas) => void;
+  saveBrushMaskToStage: (
+    rle: number[],
+    width: number,
+    height: number,
+    imageId: number
+  ) => void;
+  savePolygonToDataset: (points: { x: number; y: number }[]) => void;
+  setIsCrowded: (value: 0 | 1) => void;
+  setAnnotations: (annotations: Annotation[]) => void;
+  setHistory: (history: HistoryState[]) => void;
+  setClasses: (classes: AnnotationClass[]) => void;
+  setAllowAnnotationDelete: () => void;
+  removeAnnotationById: (annotationId: number) => void;
+}
+
+export const useAnnotationStore = create<AnnotationState>((set, get) => ({
+  classes: [],
+  selectedClassId: null,
+  classIdCounter: 1,
+  selectedImageId: null,
+  activeTool: "none",
+  brushSize: 20,
+  history: [],
+  currentHistoryIndex: -1,
+  canvas: null,
+  annotations: [],
+  annotationIdCounter: 1,
+  isCrowded: 0,
+  allowAnnotationDelete: false,
+
+  addClass: (name, supercategory, color) =>
+    set((state) => {
+      const newClass = {
+        id: state.classIdCounter,
+        name,
+        supercategory,
+        color,
+      };
+      return {
+        classes: [...state.classes, newClass],
+        selectedClassId: newClass.id,
+        classIdCounter: state.classIdCounter + 1,
+      };
+    }),
+
+  removeClass: (id: number) =>
+    set((state) => ({
+      classes: state.classes.filter((c) => c.id !== id),
+      selectedClassId:
+        state.selectedClassId === id ? null : state.selectedClassId,
+    })),
+
+  selectClass: (id: number | null) => {
+    set((state) => {
+      const timestamp = new Date().toISOString();
+      const stack = new Error().stack?.split("\n")[2] || "Unknown caller";
+      console.log(`selectedClassId alterado para ${id} às ${timestamp}`);
+      console.log(`Chamado por:`, stack);
+      const newSelectedId = state.selectedClassId === id ? null : id;
+      const newActiveTool =
+        state.selectedClassId === id ? "none" : state.activeTool;
+      return {
+        selectedClassId: newSelectedId,
+        activeTool: newActiveTool,
+      };
+    });
+  },
+
+  setBrushSize: (size) => set({ brushSize: size }),
+
+  setActiveTool: (tool) => set({ activeTool: tool }),
+
+  setIsCrowded: (value) => set({ isCrowded: value }),
+
+  setAnnotations: (annotations: Annotation[]) => set({ annotations }),
+
+  setHistory: (history) => set({ history, currentHistoryIndex: -1 }),
+
+  setClasses: (classes) =>
+    set((state) => {
+      const maxId =
+        classes.length > 0 ? Math.max(...classes.map((cls) => cls.id)) : 0;
+      return {
+        classes,
+        selectedClassId: state.selectedClassId,
+        classIdCounter: Math.max(state.classIdCounter, maxId + 1),
+      };
+    }),
+
+  saveHistory: () => {
+    const {
+      canvas,
+      annotations,
+      selectedClassId,
+      activeTool,
+      brushSize,
+      selectedImageId,
+      isCrowded,
+      allowAnnotationDelete,
+      history,
+      currentHistoryIndex,
+    } = get();
+    if (!canvas) return;
+
+    const newState: HistoryState = {
+      canvasObjects: JSON.stringify(
+        (canvas as any).toJSON(["backgroundImage", "src"])
+      ),
+      annotations: JSON.parse(JSON.stringify(annotations)),
+      selectedClassId,
+      activeTool,
+      brushSize,
+      selectedImageId,
+      isCrowded,
+      allowAnnotationDelete,
+      timestamp: Date.now(),
+      classes: [],
+    };
+
+    const newHistory = history.slice(0, currentHistoryIndex + 1);
+    if (newHistory.length >= 12) {
+      newHistory.shift();
+    }
+
+    set({
+      history: [...newHistory, newState],
+      currentHistoryIndex: newHistory.length,
+    });
+  },
+
+  undo: () => {
+    const { canvas, history, currentHistoryIndex } = get();
+    if (!canvas || currentHistoryIndex <= 0) return;
+
+    const previousState = history[currentHistoryIndex - 1];
+
+    canvas.loadFromJSON(previousState.canvasObjects, () => {
+      canvas.getObjects().forEach((obj) => {
+        obj.set({ visible: true });
+      });
+      canvas.requestRenderAll();
+    });
+
+    set({
+      annotations: JSON.parse(JSON.stringify(previousState.annotations)),
+      selectedClassId: previousState.selectedClassId,
+      activeTool: previousState.activeTool,
+      brushSize: previousState.brushSize,
+      selectedImageId: previousState.selectedImageId,
+      isCrowded: previousState.isCrowded,
+      allowAnnotationDelete: previousState.allowAnnotationDelete,
+      currentHistoryIndex: currentHistoryIndex - 1,
+    });
+  },
+
+  redo: () => {
+    const { canvas, history, currentHistoryIndex } = get();
+    if (!canvas || currentHistoryIndex >= history.length - 1) return;
+
+    const nextState = history[currentHistoryIndex + 1];
+
+    canvas.loadFromJSON(nextState.canvasObjects, () => {
+      canvas.getObjects().forEach((obj) => {
+        obj.set({ visible: true });
+      });
+      canvas.requestRenderAll();
+    });
+
+    set({
+      annotations: JSON.parse(JSON.stringify(nextState.annotations)),
+      selectedClassId: nextState.selectedClassId,
+      activeTool: nextState.activeTool,
+      brushSize: nextState.brushSize,
+      selectedImageId: nextState.selectedImageId,
+      isCrowded: nextState.isCrowded,
+      allowAnnotationDelete: nextState.allowAnnotationDelete,
+      currentHistoryIndex: currentHistoryIndex + 1,
+    });
+  },
+
+  setCanvas: (canvas) => set({ canvas }),
+
+  setSelectedImageId: (id: number | null) => set({ selectedImageId: id }),
+
+  saveBrushMaskToStage: (
+    rle: number[],
+    width: number,
+    height: number,
+    imageId: number
+  ) => {
+    const { selectedClassId, annotationIdCounter, annotations, isCrowded } =
+      get();
+
+    if (!selectedClassId) return;
+
+    const existingIndex = annotations.findIndex((ann) => {
+      return (
+        ann.classId === selectedClassId &&
+        ann.imageId === imageId &&
+        ann.segmentation &&
+        typeof ann.segmentation === "object" &&
+        !Array.isArray(ann.segmentation)
+      );
+    });
+
+    if (existingIndex !== -1) {
+      const existingAnnotation = annotations[existingIndex];
+
+      const existingSeg = existingAnnotation.segmentation as {
+        counts: number[];
+        size: [number, number];
+      };
+      const mergedRLE = mergeRLE(existingSeg.counts, rle, width, height);
+      const mergedMask = decodeRLE(mergedRLE, width, height);
+      const newArea = mergedMask.reduce((sum, val) => sum + val, 0);
+      const newBbox = calculateMaskBBox(mergedMask, width, height);
+      const updatedAnnotation: Annotation = {
+        ...existingAnnotation,
+        segmentation: {
+          counts: mergedRLE,
+          size: [height, width] as [number, number],
+        },
+        area: newArea,
+        bbox: newBbox,
+      };
+      const newAnnotations = [...annotations];
+      newAnnotations[existingIndex] = updatedAnnotation;
+
+      set({ annotations: newAnnotations });
+    } else {
+      const mask = decodeRLE(rle, width, height);
+      const area = mask.reduce((sum, val) => sum + val, 0);
+      const bbox = calculateMaskBBox(mask, width, height);
+      const newAnnotation: Annotation = {
+        id: annotationIdCounter,
+        classId: selectedClassId,
+        imageId,
+        segmentation: {
+          counts: rle,
+          size: [height, width] as [number, number],
+        },
+        area,
+        iscrowd: isCrowded,
+        bbox,
+      };
+
+      set({
+        annotations: [...annotations, newAnnotation],
+        annotationIdCounter: annotationIdCounter + 1,
+      });
+    }
+  },
+
+  savePolygonToDataset: (points: { x: number; y: number }[]) => {
+    const {
+      selectedClassId,
+      selectedImageId,
+      annotationIdCounter,
+      isCrowded,
+      classes,
+    } = get();
+    if (!selectedClassId || !selectedImageId) return;
+
+    const { datasets, updateDatasetAnnotations, updateDatasetCategories } =
+      useCOCOStore.getState();
+    const dataset = datasets.find((d) =>
+      d.images.some((img) => img.id === selectedImageId)
+    );
+    if (!dataset) return;
+
+    const selectedClass = classes.find((cls) => cls.id === selectedClassId);
+    if (!selectedClass) {
+      console.error("Selected class not found in state.");
+      return;
+    }
+
+    const categoryExists = dataset.categories.some(
+      (cat) => cat.id === selectedClassId
+    );
+
+    if (!categoryExists) {
+      updateDatasetCategories(dataset.id, [
+        {
+          id: selectedClass.id,
+          name: selectedClass.name,
+          supercategory: selectedClass.supercategory,
+          color: selectedClass.color,
+        },
+      ]);
+    }
+
+    const newAnnotation: Annotation = {
+      id: annotationIdCounter,
+      classId: selectedClassId,
+      imageId: selectedImageId,
+      segmentation: [points.flatMap(({ x, y }) => [x, y])],
+      area: calculateArea(points),
+      iscrowd: isCrowded,
+      bbox: calculateBoundingBox(points),
+    };
+
+    const updatedDatasetAnnotations = [...dataset.annotations, newAnnotation];
+    updateDatasetAnnotations(
+      dataset.id,
+      selectedImageId,
+      updatedDatasetAnnotations
+    );
+
+    set({
+      annotationIdCounter: annotationIdCounter + 1,
+      history: [
+        {
+          canvasObjects: JSON.stringify(get().canvas?.toJSON()),
+          annotations: JSON.parse(JSON.stringify(updatedDatasetAnnotations)),
+          classes: JSON.parse(JSON.stringify(get().classes)),
+          selectedClassId: get().selectedClassId,
+          activeTool: get().activeTool,
+          brushSize: get().brushSize,
+          selectedImageId: get().selectedImageId,
+          isCrowded: get().isCrowded,
+          allowAnnotationDelete: get().allowAnnotationDelete,
+          timestamp: Date.now(),
+        },
+      ],
+      currentHistoryIndex: 0,
+    });
+  },
+
+  removeAnnotationById: (annotationId: number) => {
+    set((state) => ({
+      annotations: state.annotations.filter((ann) => ann.id !== annotationId),
+    }));
+  },
+
+  setAllowAnnotationDelete: () =>
+    set((state) => ({ allowAnnotationDelete: !state.allowAnnotationDelete })),
+}));
+
+export function encodeRLE(binaryMask: Uint8Array): number[] {
+  const rle: number[] = [];
+  let count = 0;
+  let current = 0;
+  for (let i = 0; i < binaryMask.length; i++) {
+    if (binaryMask[i] === current) {
+      count++;
+    } else {
+      rle.push(count);
+      current = binaryMask[i];
+      count = 1;
+    }
+  }
+  rle.push(count);
+  return rle;
+}
