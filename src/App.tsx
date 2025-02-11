@@ -4,7 +4,6 @@ import Workspace from "./components/Workspace";
 import AssetPage from "./components/AssetPage";
 import EditorPage from "./components/EditorPage";
 import { Toaster } from "@/components/ui/sonner";
-import TestCanvas from "./components/RleView";
 
 const router = createBrowserRouter([
   {
@@ -31,15 +30,6 @@ const router = createBrowserRouter([
       <>
         <Controls />
         <EditorPage />
-      </>
-    ),
-  },
-  {
-    path: "/test",
-    element: (
-      <>
-        <Controls />
-        <TestCanvas />
       </>
     ),
   },

@@ -37,3 +37,73 @@ export function createMaskCanvas(
   ctx.putImageData(imageData, 0, 0);
   return canvas;
 }
+
+export function cropMaskCanvas(
+  sourceCanvas: HTMLCanvasElement,
+  bbox: [number, number, number, number]
+): HTMLCanvasElement {
+  const [x, y, width, height] = bbox;
+  const cropped = document.createElement("canvas");
+  cropped.width = width;
+  cropped.height = height;
+  const ctx = cropped.getContext("2d");
+  if (ctx) {
+    ctx.drawImage(sourceCanvas, x, y, width, height, 0, 0, width, height);
+  }
+  return cropped;
+}
+
+export const hexToRgb = (hex: string) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
+    : null;
+};
+
+export function calculateMaskBBox(
+  binaryMask: Uint8Array,
+  width: number,
+  height: number
+): [number, number, number, number] {
+  let minX = width,
+    minY = height,
+    maxX = 0,
+    maxY = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (binaryMask[y * width + x] === 1) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (minX === width || minY === height) return [0, 0, 0, 0];
+  return [minX, minY, maxX - minX, maxY - minY];
+}
+
+export function calculateArea(points: { x: number; y: number }[]): number {
+  let area = 0;
+  for (let i = 0; i < points.length; i++) {
+    const j = (i + 1) % points.length;
+    area += points[i].x * points[j].y - points[j].x * points[i].y;
+  }
+  return Math.abs(area / 2);
+}
+
+export function calculateBoundingBox(
+  points: { x: number; y: number }[]
+): [number, number, number, number] {
+  const xs = points.map((p) => p.x);
+  const ys = points.map((p) => p.y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const maxX = Math.max(...xs);
+  const maxY = Math.max(...ys);
+  return [minX, minY, maxX - minX, maxY - minY];
+}

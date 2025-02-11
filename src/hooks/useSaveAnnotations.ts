@@ -14,7 +14,6 @@ export function useSaveAnnotations() {
     const dataset = datasets.find((d) =>
       d.images.some((img) => img.id === selectedImageId)
     );
-
     if (!dataset) {
       console.error("Dataset not found for selected image");
       return;
@@ -24,7 +23,6 @@ export function useSaveAnnotations() {
       (ann) => ann.imageId === selectedImageId
     );
     const existingCategories = dataset.categories;
-
     const annotationIdsInDataset = new Set(
       existingAnnotations.map((ann) => ann.id)
     );

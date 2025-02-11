@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { Canvas } from "fabric";
 import { Annotation, useCOCOStore } from "./useCOCOStore";
+import { decodeRLE, mergeRLE } from "@/utils/rleUtils";
+import {
+  calculateArea,
+  calculateBoundingBox,
+  calculateMaskBBox,
+} from "@/utils/maskUtils";
 
 export type Tool = "polygon" | "brush" | "eraser" | "none";
 export type PositionMode = "precision" | "direct";
@@ -94,6 +100,10 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
   selectClass: (id: number | null) => {
     set((state) => {
+      const timestamp = new Date().toISOString();
+      const stack = new Error().stack?.split("\n")[2] || "Unknown caller";
+      console.log(`selectedClassId alterado para ${id} às ${timestamp}`);
+      console.log(`Chamado por:`, stack);
       const newSelectedId = state.selectedClassId === id ? null : id;
       const newActiveTool =
         state.selectedClassId === id ? "none" : state.activeTool;
@@ -303,96 +313,6 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     set((state) => ({ allowAnnotationDelete: !state.allowAnnotationDelete })),
 }));
 
-function mergeRLE(
-  rle1: number[],
-  rle2: number[],
-  width: number,
-  height: number
-): number[] {
-  const mask1 = decodeRLE(rle1, width, height);
-  const mask2 = decodeRLE(rle2, width, height);
-  const mergedMask = new Uint8Array(width * height);
-  for (let i = 0; i < mergedMask.length; i++) {
-    mergedMask[i] = mask1[i] || mask2[i] ? 1 : 0;
-  }
-  return encodeRLE(mergedMask);
-}
-
-export function calculateMaskBBox(
-  binaryMask: Uint8Array,
-  width: number,
-  height: number
-): [number, number, number, number] {
-  let minX = width,
-    minY = height,
-    maxX = 0,
-    maxY = 0;
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      if (binaryMask[y * width + x] === 1) {
-        if (x < minX) minX = x;
-        if (y < minY) minY = y;
-        if (x > maxX) maxX = x;
-        if (y > maxY) maxY = y;
-      }
-    }
-  }
-  if (minX === width || minY === height) return [0, 0, 0, 0];
-  return [minX, minY, maxX - minX, maxY - minY];
-}
-
-function calculateArea(points: { x: number; y: number }[]): number {
-  let area = 0;
-  for (let i = 0; i < points.length; i++) {
-    const j = (i + 1) % points.length;
-    area += points[i].x * points[j].y - points[j].x * points[i].y;
-  }
-  return Math.abs(area / 2);
-}
-
-function calculateBoundingBox(
-  points: { x: number; y: number }[]
-): [number, number, number, number] {
-  const xs = points.map((p) => p.x);
-  const ys = points.map((p) => p.y);
-  const minX = Math.min(...xs);
-  const minY = Math.min(...ys);
-  const maxX = Math.max(...xs);
-  const maxY = Math.max(...ys);
-  return [minX, minY, maxX - minX, maxY - minY];
-}
-
-export function hexToRgb(hex: string) {
-  hex = hex.replace("#", "");
-  if (hex.length === 3) {
-    hex = hex
-      .split("")
-      .map((ch) => ch + ch)
-      .join("");
-  }
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  return { r, g, b };
-}
-
-export function decodeRLE(
-  rle: number[],
-  width: number,
-  height: number
-): Uint8Array {
-  const binaryMask = new Uint8Array(width * height);
-  let index = 0;
-  for (let i = 0; i < rle.length; i++) {
-    const value = i % 2 === 0 ? 0 : 1;
-    const count = rle[i];
-    for (let j = 0; j < count; j++) {
-      binaryMask[index++] = value;
-    }
-  }
-  return binaryMask;
-}
-
 export function encodeRLE(binaryMask: Uint8Array): number[] {
   const rle: number[] = [];
   let count = 0;
@@ -408,39 +328,4 @@ export function encodeRLE(binaryMask: Uint8Array): number[] {
   }
   rle.push(count);
   return rle;
-}
-
-export function intersectRLE(
-  rle1: number[],
-  rle2: number[],
-  width: number,
-  height: number
-): number[] {
-  const mask1 = decodeRLE(rle1, width, height);
-  const mask2 = decodeRLE(rle2, width, height);
-  const intersection = new Uint8Array(mask1.length);
-
-  for (let i = 0; i < mask1.length; i++) {
-    intersection[i] = mask1[i] & mask2[i];
-  }
-
-  return encodeRLE(intersection);
-}
-
-export function subtractRLEForErase(
-  originalRLE: number[],
-  eraseRLE: number[],
-  width: number,
-  height: number
-): number[] {
-  const mask = decodeRLE(originalRLE, width, height);
-  const eraseMask = decodeRLE(eraseRLE, width, height);
-
-  for (let i = 0; i < mask.length; i++) {
-    if (eraseMask[i] === 1) {
-      mask[i] = 0;
-    }
-  }
-
-  return encodeRLE(mask);
 }

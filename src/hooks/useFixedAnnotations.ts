@@ -2,41 +2,8 @@ import { useEffect } from "react";
 import { Canvas, Control, FabricImage, Polygon, Rect } from "fabric";
 import { useCOCOStore } from "@/store/useCOCOStore";
 import { useAnnotationStore } from "@/store/useAnnotationStore";
-import { createMaskCanvas } from "@/utils/maskUtils";
-
-function cropMaskCanvas(
-  sourceCanvas: HTMLCanvasElement,
-  bbox: [number, number, number, number]
-): HTMLCanvasElement {
-  const [x, y, width, height] = bbox;
-  const cropped = document.createElement("canvas");
-  cropped.width = width;
-  cropped.height = height;
-  const ctx = cropped.getContext("2d");
-  if (ctx) {
-    ctx.drawImage(sourceCanvas, x, y, width, height, 0, 0, width, height);
-  }
-  return cropped;
-}
-
-function deleteObject(_eventData: unknown, transform: any): boolean {
-  const target = transform.target;
-  if (target && target.canvas) {
-    const annotationId = target.annotationId;
-    const datasetId = target.datasetId;
-    const imageId = target.imageId;
-    const { updateDatasetAnnotations, datasets } = useCOCOStore.getState();
-    const dataset = datasets.find((d: any) => d.id === datasetId);
-    if (dataset) {
-      const newAnnotations = dataset.annotations.filter(
-        (ann: any) => ann.id !== annotationId
-      );
-      updateDatasetAnnotations(datasetId, imageId, newAnnotations);
-    }
-    target.canvas.remove(target);
-  }
-  return true;
-}
+import { createMaskCanvas, cropMaskCanvas } from "@/utils/maskUtils";
+import { deleteObject } from "@/utils/canvasUtils";
 
 export function useFixedAnnotations(
   canvas: Canvas | null,
